@@ -1,4 +1,4 @@
-#include "Header.h"
+#include "short_characteristics_.h"
 size_t CenterOfTetra(const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Type* PointInTetra);
 size_t PointIntersect(Type* start_point, Type* direction, Type* point, Type* result);
 
@@ -54,17 +54,38 @@ size_t ReadFileVtk(const size_t class_file_vtk, const std::string name_file_vtk,
 	reader_vtk->GetOutput()->GlobalReleaseDataFlagOn();
 	return 0;
 }
+size_t FromDecartToSphere(const Type* decart, Type& fi, Type& theta) {
+	Type x = decart[0];
+	Type y = decart[1];
+	
+	//cout << x * x + y * y + decart[2] * decart[2] << '\n';
 
+	theta = atan(sqrt(x * x + y * y) / decart[2]) + PI/2;
+
+	if (x <= 0)
+		fi = atan(y / x) + PI;
+	else if (x > 0 && y < 0)
+		fi = atan(y / x) + 2 * PI;
+	else if (x > 0 && y >= 0)
+		fi = atan(y / x) ;
+
+	return 0;
+}
 size_t FromDecartToSphere(const vtkSmartPointer<vtkUnstructuredGrid>& sphere_direction_grid, vector<Type>& directions_all) {
 
 	Type P[3];
-	for (size_t i = 0; i < sphere_direction_grid->GetNumberOfPoints(); i++){
+	Type fi;
+	Type theta;
+	for (size_t i = 1; i < sphere_direction_grid->GetNumberOfPoints(); i++) {
 		sphere_direction_grid->GetPoint(i, P);
-		directions_all[i] = atan(sqrt(P[0] * P[0] + P[1] * P[1]) / P[2]);
-		directions_all[i + 1] = atan(P[1] / P[0]);
+
+		FromDecartToSphere(P, fi, theta);
+		directions_all[i] = theta;
+		directions_all[i + 1] = fi;
 	}
 	return 0;
 }
+
 size_t ReadSphereDirectionVtk(const size_t class_file_vtk, const std::string name_file_sphere_direction, vector<Type>& directions_all) {
 
 	/*Чтение исходного файла (vtk or txt) и запись в массив*/
@@ -92,7 +113,7 @@ size_t ReadSphereDirectionVtk(const size_t class_file_vtk, const std::string nam
 		directions_all.resize(unstructuredgrid->GetNumberOfPoints() * 2);
 		FromDecartToSphere(unstructuredgrid, directions_all);
 	}
-	else {
+	else if (class_file_vtk == 1) {
 		ifstream ifile;
 
 		ifile.open(name_file_sphere_direction);
@@ -102,13 +123,39 @@ size_t ReadSphereDirectionVtk(const size_t class_file_vtk, const std::string nam
 		}
 		int N = 0;
 		ifile >> N;
-		directions_all.resize(2*N);
+		directions_all.resize(2 * N);
 
 		int i = 0;
 		while (!ifile.eof())
 			ifile >> directions_all[i++] >> directions_all[i++];
-		ifile.close();	
+		ifile.close();
 	}
+	else if (class_file_vtk == 2) {
+		ifstream ifile;
+
+		ifile.open(name_file_sphere_direction);
+		if (!ifile.is_open()) {
+			std::cout << "Error read file sphere direction\n";
+			return 1;
+		}
+		int N = 0;
+		ifile >> N;
+		directions_all.resize(2 * N);
+
+		int i = 0;
+		Type P[3];
+		Type theta;
+		Type fi;
+		while (!ifile.eof()) {
+			ifile >> P[0] >> P[1] >> P[2];
+			FromDecartToSphere(P, fi, theta);
+			directions_all[i++] = theta;
+			directions_all[i++] = fi;
+		}
+		ifile.close();
+	}
+	else
+		std::cout << "Error class_file_vtk\n";
 
 	return 0;
 }
@@ -329,8 +376,6 @@ bool InTriangle(const std::vector<Type*>& face, const Type* X) {
 	else return false;
 }
 
-
-
 size_t Make2dPoint(const Type* start, Type**& local_basis, const Type* point, Type* new_point) {
 
 	for (size_t i = 0; i < 3; i++)
@@ -343,9 +388,6 @@ size_t Make2dPoint(const Type* start, Type**& local_basis, const Type* point, Ty
 	}
 	return 0;
 }
-
-
-
 
 Type MakeLength(Type* point1, Type* point2) {
 	

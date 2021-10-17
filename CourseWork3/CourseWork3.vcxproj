@@ -163,11 +163,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="short_characteristics_calculations.cpp" />
+    <ClCompile Include="short_characteristics_main.cpp" />
     <ClCompile Include="ray_tracing3d_simple_calculation.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Header.h" />
+    <ClInclude Include="short_characteristics_.h" />
+    <ClInclude Include="short_characteristics_calculations.h" />
+    <ClInclude Include="short_characteristics_main.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
