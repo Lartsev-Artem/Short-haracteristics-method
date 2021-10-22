@@ -1,3 +1,7 @@
-﻿  ray_tracing3d_simple_calculation.cpp
+﻿  short_characteristics_calculations.cpp
   The contents of <execution> are available only with C++17 or later.
-  CourseWork3.vcxproj -> C:\Users\Artem\Desktop\МГТУ\CourseWork3\Release\CourseWork3.exe
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(591): warning #1491: definition from the enclosing scope variable "i" (declared at line 574) :is used. definition from the for loop variable "i" (declared at line 580) is ignored
+    			normals(i, j) = n[j];
+    			        ^
+  
+  CourseWork3.vcxproj -> D:\Desktop\МГТУ\CourseWork3\Release\CourseWork3.exe

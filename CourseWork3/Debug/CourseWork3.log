@@ -1,6 +1,3 @@
-﻿  short_characteristics_calculations.cpp
-  The contents of <execution> are available only with C++17 or later.
+﻿icl: : warning #10182: disabling optimization; runtime debug checks enabled
   short_characteristics_main.cpp
-  The contents of <execution> are available only with C++17 or later.
-  ray_tracing3d_simple_calculation.cpp
   The contents of <execution> are available only with C++17 or later.

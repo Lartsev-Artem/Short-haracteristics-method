@@ -103,6 +103,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,6 +121,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,6 +139,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,6 +157,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -165,7 +169,6 @@
   <ItemGroup>
     <ClCompile Include="short_characteristics_calculations.cpp" />
     <ClCompile Include="short_characteristics_main.cpp" />
-    <ClCompile Include="ray_tracing3d_simple_calculation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="short_characteristics_.h" />

@@ -18,9 +18,6 @@
     <ClCompile Include="short_characteristics_main.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="ray_tracing3d_simple_calculation.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
     <ClCompile Include="short_characteristics_calculations.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>

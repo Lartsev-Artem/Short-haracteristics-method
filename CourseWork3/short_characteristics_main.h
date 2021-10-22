@@ -12,7 +12,6 @@ typedef double Type;
 typedef Eigen::Vector3d Vector3;
 typedef Eigen::Matrix3d Matrix3;
 
-
 template<typename Type>
 size_t ReadStartSettings(std::string name_file_settings, Type& class_file_vtk, std::string& name_file_vtk,
 	std::string& name_file_sphere_direction, std::string& out_file_grid_vtk) {
