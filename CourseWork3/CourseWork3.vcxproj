@@ -167,11 +167,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="short_characteristics_build_graph.cpp" />
     <ClCompile Include="short_characteristics_calculations.cpp" />
     <ClCompile Include="short_characteristics_main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="short_characteristics_.h" />
+    <ClInclude Include="short_characteristics_build_graph.h" />
     <ClInclude Include="short_characteristics_calculations.h" />
     <ClInclude Include="short_characteristics_main.h" />
   </ItemGroup>

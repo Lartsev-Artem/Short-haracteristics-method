@@ -53,7 +53,7 @@ int FromGlobalToLocalTetra(const Eigen::Matrix4d& vertex_tetra, const Eigen::Vec
 
 int GetInterpolationCoef    (const Eigen::Matrix3d& interpolation_nodes, const Eigen::Vector3d& function_value, Eigen::Vector3d& coef);
 Vector3 GetInterpolationCoef(const Eigen::Matrix3d& interpolation_nodes, const Eigen::Vector3d& function_value);
-Type GetIllum(const int cur_id, const Type s, const Type I_node_prev,
+Type GetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_node_prev,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate);
 int NormalToFace(vtkCell* cell_face, Vector3& n);
 size_t IntersectionWithPlane(vtkCell* face, const Vector3& start_point, const Vector3& direction, Vector3& result);
@@ -68,6 +68,7 @@ int FromSphericalToDecart(const int number_cur, const vector<Type>& all_directio
 int NormalsToCell(vtkCell* cell_tetra, Eigen::Matrix<Type, 4, 3>& normals);
 int MakeFileDirectionsCenterTriangle(const std::string name_file_sphere_direction, const vtkSmartPointer<vtkUnstructuredGrid>& spehere_directions);
 size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_direction, vector<Type>& directions_all, vector<Type>& squares, Type& square_surface);
+size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_direction, vector<Type>& directions_all);
 size_t TransformNetgenToVtkSurface(const std::string name_file_netgen, const std::string name_new_file_vtk);
 Type IntegarteDirection(const vector<Type>& squares, const Type scuare_surface);
 int FromPlaneToTetra(const Eigen::Matrix3d& inverse_transform_matrix, const Eigen::Vector3d& start_point, const Eigen::Vector3d& plane_coord, Eigen::Vector3d& tetra_coord);

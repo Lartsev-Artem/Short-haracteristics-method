@@ -59,6 +59,9 @@ int CalculateNodeValue(const int num_cur_cell, vtkCell* cur_cell, const int num_
 		//	std::cout << "direction.normal==0, SOS!!!\n"; continue; // плоскость параллельна направлению
 		//}
 
+		/*if (nodes_value.find(Min(all_pairs_face[num_cur_cell * 4 + num_in_face], num_cur_cell * 4 + num_in_face))->second[0] < 0) {
+			cout<< Min(all_pairs_face[num_cur_cell * 4 + num_in_face], num_cur_cell * 4 + num_in_face) << "  Undefine face!!!\n";
+		}*/
 		IntersectionWithPlane(cur_cell->GetFace(num_in_face), x, direction, x0);
 
 		if (InTriangle(cur_cell->GetFace(num_in_face), x0)) {
@@ -75,7 +78,7 @@ int CalculateNodeValue(const int num_cur_cell, vtkCell* cur_cell, const int num_
 			if (global_num_out_face == -1)global_num_out_face = num_cur_cell * 4 + num_cur_out_face;
 
 			nodes_value.find(global_num_out_face)->second[num_node] =
-				GetIllum(num_cur_cell, s, I_x0, density, absorp_coef, rad_en_loose_rate);
+				GetIllum(num_cur_cell,x0, s, I_x0, density, absorp_coef, rad_en_loose_rate);
 			break;
 		}
 
@@ -182,9 +185,9 @@ size_t SetBasis(const Type* start_point, Vector3& normal, Matrix3& basis) {
 	vec_1.normalize();
 	vec_2.normalize();
 
-	basis.col(1) = vec_1;
-	basis.col(2) = vec_2;
-	basis.col(3) = normal;
+	basis.col(0) = vec_1;
+	basis.col(1) = vec_2;
+	basis.col(2) = normal;
 
 	return 0;
 }
@@ -216,7 +219,7 @@ bool InTriangle(vtkCell* face, const Eigen::Vector3d& XX) {
 	
 	Vector3 A, B, C, X;
 	{
-		Type Xx[3] = { XX[1],XX[2],XX[3] };
+		Type Xx[3] = { XX[0],XX[1],XX[2] };
 		Vector3 n;
 		Matrix3 basis;
 		NormalToFace(face, n);
@@ -249,9 +252,10 @@ Type IntegarteDirection(const vector<Type>& squares, const Type scuare_surface) 
 Type IntegarteDirection(const int num_cell, const vector<Type>& Illum, const vector<Type>& squares, const Type scuare_surface) {
 	Type res = 0;
 	int n = squares.size();
+	int m = Illum.size() / n;
 	
 	for (size_t i = 0; i < n; i++) {
-		res += Illum[n * i + num_cell] * squares[i];
+		res += Illum[m * i + num_cell] * squares[i];
 		}
 
 	return res / scuare_surface;
@@ -391,12 +395,13 @@ int FromPlaneToTetra(const Eigen::Matrix3d& inverse_transform_matrix, const Eige
 	return 0;
 }
 
-Type GetIllum(const int cur_id, const Type s, const Type I_node_prev,
+Type GetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_node_prev,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate) {
 
-	Type Ie = 10; // rad_en_loose_rate->GetTuple1(cur_id);
-	Type k = 1;
 
+	Type Ie = 10; // rad_en_loose_rate->GetTuple1(cur_id);
+	if (x.norm() > 0.3) Ie = 0;
+	Type k = 1;
 
 	return Ie + (I_node_prev - Ie) * exp(-s * k);
 }
@@ -483,7 +488,7 @@ Type GetValueInCenterCell(const int num_cell, vtkCell* cur_cell, const Vector3 c
 			Type I_x0 = CalculateIllumeOnInnerFace(i, global_num_in_face, vertex_tetra, center, x0, nodes_value,
 				straight_face, inclined_face,  transform_matrix, start_point_plane_coord);
 
-			value = GetIllum(num_cell, s, I_x0, density, absorp_coef, rad_en_loose_rate);
+			value = GetIllum(num_cell, x0,s, I_x0, density, absorp_coef, rad_en_loose_rate);
 			break;
 		}
 	}
@@ -717,7 +722,7 @@ int FindInAndOutFaces(const Vector3  direction, vtkCell* cur_cell_tetra, int* fa
 
 		NormalToFace(cur_cell_tetra->GetFace(i), normal);
 
-		if (normal.dot(direction) <= 0)
+		if (normal.dot(direction) >= 0)
 			face_state[i] = 1;
 		else
 			face_state[i] = 0;
@@ -817,7 +822,7 @@ size_t SortCellsGrid(Vector3 main_direction, const vtkSmartPointer<vtkUnstructur
 			L1 += pow(start_point[i] - left_point[i], 2);
 			L2 += pow(start_point[i] - right_point[i], 2);
 		}
-		return L1 > L2;
+		return L1 < L2;
 	} };
 
 	for (size_t i = 0; i < unstructuredgrid->GetNumberOfCells(); i++)
@@ -1107,6 +1112,35 @@ size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_d
 	//sort(directions_all.begin(), directions_all.begin() + N);
 	//sort(directions_all.begin() + N, directions_all.end());
 
+	return 0;
+}
+size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_direction, vector<Type>& directions_all) {
+
+	ifstream ifile;
+
+	ifile.open(name_file_sphere_direction);
+	if (!ifile.is_open()) {
+		std::cout << "Error read file sphere direction\n";
+		return 1;
+	}
+	int N = 0;
+	ifile >> N;
+	directions_all.resize(2 * N);
+
+	Type buf_s;
+	int i = 0;
+	Type P[3];
+	Type theta;
+	Type fi;
+	for (int i = 0; i < N; i++) {
+		ifile >> buf_s;
+		ifile >> P[0] >> P[1] >> P[2];
+		FromDecartToSphere(P, fi, theta);
+		directions_all[i] = theta;
+		directions_all[N + i] = fi;
+	}
+	ifile >> buf_s;
+	ifile.close();
 	return 0;
 }
 

@@ -4,6 +4,7 @@
 
 #include"short_characteristics_.h"
 #include"short_characteristics_calculations.h"
+#include "short_characteristics_build_graph.h"
 #include<map>
 
 const double eps = 1e-10;
@@ -19,7 +20,7 @@ size_t ReadStartSettings(std::string name_file_settings, Type& class_file_vtk, s
 	std::ifstream ifile;
 	ifile.open(name_file_settings);
 	if (!ifile.is_open()) {
-		std::cerr << " Error : file settings is not open !\n";
+		std::cerr << " Error : file settings build graph is not open !\n";
 		return 1;
 	}
 
