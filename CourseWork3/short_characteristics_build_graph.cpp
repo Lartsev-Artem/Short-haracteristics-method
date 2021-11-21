@@ -1,16 +1,15 @@
 #include "short_characteristics_build_graph.h"
 
-int MainBuildGraphs(int argc, char* argv) {
+int MainBuildGraphs(int argc, char* argv[]) {
 
 	std::string main_file_direction = "D:\\Desktop\\FilesCourse\\";
 
-	std::string name_file_settings = main_file_direction + "file_settings.txt";
-	std::string name_file_grid = main_file_direction + "Sphere109.vtk";
-	std::string name_file_sphere_direction = main_file_direction + "SphereDir.txt";
-	std::string name_file_graph = main_file_direction + "GraphDirections\\graph";
+	std::string name_file_settings = main_file_direction + "FOOsettings_file.txt";
+	std::string name_file_grid = main_file_direction + "Sphere2519.vtk";//"Sphere109.vtk";//"MyVTK1.vtk";//
+	std::string name_file_sphere_direction = main_file_direction + "SphereDir660.txt";
+	std::string name_file_graph = main_file_direction + "TestClaster\\graph";//"GraphDirections\\graph";
 
 	ReadStartSettings(name_file_settings, main_file_direction, name_file_sphere_direction, name_file_graph);
-
 
 	std::vector<Type> directions;
 	ReadSphereDirectionDecartToSpherical(name_file_sphere_direction, directions);
@@ -31,12 +30,14 @@ int MainBuildGraphs(int argc, char* argv) {
 
 	Vector3 direction;
 
-	for (size_t cur_direction = 0; cur_direction < directions.size()/2; cur_direction++) {
-
+	for (size_t cur_direction = 0; cur_direction < directions.size()/2; cur_direction++)
+	{
 		set_graph.clear();
 		InitBoundarySet(unstructured_grid, set_boundary_cells);
 		InitFacesState(all_pairs_id, faces_state);
 		FromSphericalToDecart(cur_direction, directions, direction);
+
+		//direction = Vector3(1, 0, 0);
 	
 		std::ofstream ofile;
 		ofile.open(name_file_graph + to_string(cur_direction) + ".txt");
@@ -46,12 +47,13 @@ int MainBuildGraphs(int argc, char* argv) {
 			return 1;
 		}
 
+		//std::vector<int> buf;
 		while (set_boundary_cells.size()) {
 
 			IntId id_cell = GetNextCell(direction, set_boundary_cells, unstructured_grid, faces_state, all_pairs_id);
 
 			set_graph.emplace(id_cell);
-
+			//buf.push_back(id_cell);
 			ofile << id_cell << '\n';
 
 			ReBuildSetBondary(id_cell, direction, set_boundary_cells, unstructured_grid, faces_state, all_pairs_id, set_graph);
@@ -59,9 +61,9 @@ int MainBuildGraphs(int argc, char* argv) {
 		ofile.close();
 
 		std::cout << "Graph construction in the direction #" << cur_direction << " is completed\n";
+		//WriteFileBoundary(main_file_direction + "Sphere565boundVTK.vtk", name_file_graph + "0.txt", unstructured_grid);
+		//return -666;
 	}
-
-//	WriteFileBoundary(main_file_direction + "boundVTK.vtk", name_file_graph+"0.txt", unstructured_grid);
 			
 	return 0;
 }
@@ -71,11 +73,12 @@ bool CheckCell(const IntId id_cell, const Vector3& direction, const vtkSmartPoin
 
 
 	IntId face_state[4];
-	FindInAndOutFaces(direction, u_grid->GetCell(id_cell), face_state);
+	//FindInAndOutFaces(direction, u_grid->GetCell(id_cell), face_state);
+	FindInAndOutFaces(direction, id_cell, u_grid, face_state);
 
 	for (size_t i = 0; i < 4; i++)
 		if (face_state[i]) {
-			if (faces_state[id_cell * 4 + i] == 0 && faces_state[all_pairs_id[id_cell * 4 + i]] == 0) {
+			if (faces_state[id_cell * 4 + i] == 0){// && faces_state[all_pairs_id[id_cell * 4 + i]] == 0) {
 				// грани не определены
 				return false;
 			}
@@ -151,7 +154,8 @@ int ReBuildSetBondary(const IntId id_cell, const Vector3& direction, std::set<In
 	std::vector<IntId>& faces_state, const std::vector<IntId>& all_pairs_id, std::set<IntId>& set_graph) {
 
 	IntId face_state[4];
-	FindInAndOutFaces(direction, u_grid->GetCell(id_cell), face_state);
+	FindInAndOutFaces(direction, id_cell, u_grid, face_state);
+	//FindInAndOutFaces(direction, u_grid->GetCell(id_cell), face_state);
 
 	for (size_t i = 0; i < 4; i++)
 		if (face_state[i] == 0) {

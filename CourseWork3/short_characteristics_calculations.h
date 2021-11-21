@@ -24,7 +24,7 @@ int ReadNextCellData(ifstream& ifs, Eigen::Matrix<Type, 4, 3>& normals, Vector3&
 int ReadCenters(const std::string name_file, vector<Vector3>& centers_tetra);
 int ReadCentersFromGeneralFile(const std::string name_file, vector<Vector3>& centers_tetra);
 
-Type GetValueInCenterCell(const int num_cell, vtkCell* cur_cell, const Vector3 center, const Vector3 direction,
+Type GetValueInCenterCell(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cur_cell, const Vector3 center, const Vector3 direction,
 	const Eigen::Matrix4d& vertex_tetra, const std::map<int, Vector3>& nodes_value, const std::vector<int>& all_pairs_face,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate,
 	const Matrix3& straight_face, const Matrix3& inclined_face, const Matrix3& transform_matrix, const Vector3& start_point_plane_coord);
@@ -38,7 +38,8 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 	const Matrix3& straight_face, const Matrix3& inclined_face, const Matrix3& transform_matrix, const Matrix3& inverse_transform_matrix,
 	const Vector3& start_point_plane_coord);
 
-
+size_t Make2dPoint(const Type* start, const Matrix3& local_basis, const Type* point, Vector3& new_point);
+size_t SetBasis(const Type* start_point, Vector3& normal, Matrix3& basis);
 int SetVertexMatrix(vtkCell* cell, Eigen::Matrix4d& vertex_tetra);
 int FindInAndOutFaces(const Vector3  direction, vtkCell* cur_cell_tetra, int* face_state);
 int FindNeighborsPairFace(const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, std::vector<int>& all_pairs_face);
@@ -55,9 +56,10 @@ int GetInterpolationCoef    (const Eigen::Matrix3d& interpolation_nodes, const E
 Vector3 GetInterpolationCoef(const Eigen::Matrix3d& interpolation_nodes, const Eigen::Vector3d& function_value);
 Type GetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_node_prev,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate);
-int NormalToFace(vtkCell* cell_face, Vector3& n);
+int NormalToFace999(vtkCell* cell_face, Vector3& n);
 size_t IntersectionWithPlane(vtkCell* face, const Vector3& start_point, const Vector3& direction, Vector3& result);
-bool InTriangle(vtkCell* face, const Eigen::Vector3d& XX);
+bool InTriangle9999(vtkCell* face, const Eigen::Vector3d& XX);
+bool InTriangle(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cell_face, int number_face, const Eigen::Vector3d& XX);
 int FindCentersSpheres(const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, vector<Vector3>& centers_tetra);
 int FindCentersSpheres(const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, const Vector3& local_center, vector<Vector3>& centers_tetra);
 size_t MakeEnergy(const vector<Type>& Illum, const vector<Type>& squares, const Type scuare_surface, vector<Type>& energy);
@@ -65,16 +67,19 @@ Type IntegarteDirection(const int num_cell, const vector<Type>& Illum, const vec
 size_t WriteFileSolution(const std::string NameFileOut, const std::vector<Type>& vector_energy, const vtkSmartPointer<vtkUnstructuredGrid>& UGrid);
 size_t CenterOfTetra(const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Vector3& PointInTetra);
 int FromSphericalToDecart(const int number_cur, const vector<Type>& all_directions, Vector3& direction);
-int NormalsToCell(vtkCell* cell_tetra, Eigen::Matrix<Type, 4, 3>& normals);
+int NormalsToCell999(vtkCell* cell_tetra, Eigen::Matrix<Type, 4, 3>& normals);
 int MakeFileDirectionsCenterTriangle(const std::string name_file_sphere_direction, const vtkSmartPointer<vtkUnstructuredGrid>& spehere_directions);
 size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_direction, vector<Type>& directions_all, vector<Type>& squares, Type& square_surface);
 size_t ReadSphereDirectionDecartToSpherical(const std::string name_file_sphere_direction, vector<Type>& directions_all);
 size_t TransformNetgenToVtkSurface(const std::string name_file_netgen, const std::string name_new_file_vtk);
 Type IntegarteDirection(const vector<Type>& squares, const Type scuare_surface);
 int FromPlaneToTetra(const Eigen::Matrix3d& inverse_transform_matrix, const Eigen::Vector3d& start_point, const Eigen::Vector3d& plane_coord, Eigen::Vector3d& tetra_coord);
-
-template<typename T, typename T1>
-T Min(const T a, const T1 b) {
+size_t NormalToFace(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, int number_face, Vector3& n);
+size_t NormalAndSquareFace(size_t NumberCell, size_t NumberFace, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Vector3& n);
+int FindInAndOutFaces(const Vector3& direction, const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, int* face_state);
+int NormalsToCell(const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Eigen::Matrix<Type, 4, 3>& normals);
+template<typename T>
+int Min(const T a, const int b) {
 	if (a < b) return a;
 	return b;
 }

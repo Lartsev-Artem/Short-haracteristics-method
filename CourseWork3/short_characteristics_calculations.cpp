@@ -11,39 +11,57 @@ Type CalculateIllumeOnInnerFace(const int num_in_face, const int global_num_in_f
 	if (global_num_in_face == -1) {
 		/*Граничные условия*/
 		I_x0 = BoundaryFunction(x0);
+		return I_x0;
 	}
 	else {
 
-		Vector3 x0_local;
-		if (num_in_face != 3) {
-			FromGlobalToLocalTetra(vertex_tetra, x0, x0_local);
-			Vector3 coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
-			switch (num_in_face) {
-			case 0:
-				I_x0 = x0_local[1] * coef[0] + x0_local[2] * coef[1] + coef[2];
-				break;
-			case 1:
-				I_x0 = x0_local[0] * coef[0] + x0_local[2] * coef[1] + coef[2];
-				break;
-			case 2:
-				I_x0 = x0_local[0] * coef[0] + x0_local[1] * coef[1] + coef[2];
-				break;
-			}
-		}
-		else {//наклонная плоскость
+		if (nodes_value.find(global_num_in_face)->second[0] < -600)
+			cout << global_num_in_face << "CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
 
-			FromGlobalToLocalTetra(vertex_tetra, x0, x0_local);
+		Vector3 x0_local;
+
+		FromGlobalToLocalTetra(vertex_tetra, x0, x0_local);
+		Vector3 coef;// = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+
+		switch (num_in_face) {
+		case 3:
 			Vector3 local_plane_x0;
 			FromTetraToPlane(transform_matrix, start_point_plane_coord, x0_local, local_plane_x0);
 
-			Vector3 coef = GetInterpolationCoef(inclined_face, nodes_value.find(global_num_in_face)->second);
+			coef = GetInterpolationCoef(inclined_face, nodes_value.find(global_num_in_face)->second);
 			I_x0 = local_plane_x0[0] * coef[0] + local_plane_x0[1] * coef[1] + coef[2];
-		}
-	}
-	return I_x0;
-}
 
-int CalculateNodeValue(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_out_face, const int* face_state,
+			/*I_x0 = x0_local[1] * coef[0] + x0_local[2] * coef[1] + coef[2];
+			Vector3 coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);*/
+			break;
+		case 1:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[1] * coef[0] + x0_local[2] * coef[1] + coef[2];
+
+			break;
+		case 2:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[0] * coef[0] + x0_local[2] * coef[1] + coef[2];
+
+			break;
+		case 0:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[0] * coef[0] + x0_local[1] * coef[1] + coef[2];
+
+			break;
+		}
+		if (I_x0 < 0) {
+			static int cc = 0;
+			//cout<< num_in_face<<"::" << cc++ << "num_face: " << global_num_in_face << ", I= " << I_x0 << '\n';
+			return 0;
+		}
+
+		return I_x0;
+	}
+}
+	
+
+int CalculateNodeValue(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cur_cell, const int num_cur_out_face, const int* face_state,
 	const Vector3& direction,
 	std::map<int, Vector3>& nodes_value, const std::vector<int>& all_pairs_face,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate,
@@ -64,7 +82,7 @@ int CalculateNodeValue(const int num_cur_cell, vtkCell* cur_cell, const int num_
 		}*/
 		IntersectionWithPlane(cur_cell->GetFace(num_in_face), x, direction, x0);
 
-		if (InTriangle(cur_cell->GetFace(num_in_face), x0)) {
+		if (InTriangle(num_cur_cell, unstructuredgrid, cur_cell,num_in_face, x0)) {
 
 			//cout << all_pairs_face[num_cur_cell * 4 + num_in_face] << "  " << num_cur_cell * 4 + num_in_face << '\n';
 			int global_num_in_face = Min(all_pairs_face[num_cur_cell * 4 + num_in_face], num_cur_cell * 4 + num_in_face);
@@ -185,9 +203,9 @@ size_t SetBasis(const Type* start_point, Vector3& normal, Matrix3& basis) {
 	vec_1.normalize();
 	vec_2.normalize();
 
-	basis.col(0) = vec_1;
-	basis.col(1) = vec_2;
-	basis.col(2) = normal;
+	basis.row(0) = vec_1;
+	basis.row(1) = vec_2;
+	basis.row(2) = normal;
 
 	return 0;
 }
@@ -222,7 +240,43 @@ bool InTriangle(vtkCell* face, const Eigen::Vector3d& XX) {
 		Type Xx[3] = { XX[0],XX[1],XX[2] };
 		Vector3 n;
 		Matrix3 basis;
-		NormalToFace(face, n);
+		//NormalToFace(face, n);
+		SetBasis(AA, n, basis);
+		Make2dPoint(AA, basis, AA, A);
+		Make2dPoint(AA, basis, BB, B);
+		Make2dPoint(AA, basis, CC, C);
+		Make2dPoint(AA, basis, Xx, X);
+	}
+
+	// линейная алгебра
+	Type r1 = (A[0] - X[0]) * (B[1] - A[1]) - (B[0] - A[0]) * (A[1] - X[1]);
+	Type r2 = (B[0] - X[0]) * (C[1] - B[1]) - (C[0] - B[0]) * (B[1] - X[1]);
+	Type r3 = (C[0] - X[0]) * (A[1] - C[1]) - (A[0] - C[0]) * (C[1] - X[1]);
+
+	if (r1 < 0 && r2 < 0 && r3 < 0)
+		return true;
+	else if (r1 > 0 && r2 > 0 && r3 > 0)
+		return true;
+	else return false;
+}
+bool InTriangle(const int num_cell,  const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid,vtkCell* cell_face, int number_face, const Eigen::Vector3d& XX) {
+	/*face --- треугольник, X --- точка для проверки*/
+
+	// вершины треугольника
+	Type AA[3];
+	Type BB[3];
+	Type CC[3];
+	cell_face->GetFace(number_face)->GetPoints()->GetPoint(0, AA);
+	cell_face->GetFace(number_face)->GetPoints()->GetPoint(1, BB);
+	cell_face->GetFace(number_face)->GetPoints()->GetPoint(2, CC);
+
+
+	Vector3 A, B, C, X;
+	{
+		Type Xx[3] = { XX[0],XX[1],XX[2] };
+		Vector3 n;
+		Matrix3 basis;
+		NormalToFace(num_cell, unstructuredgrid, number_face, n);
 		SetBasis(AA, n, basis);
 		Make2dPoint(AA, basis, AA, A);
 		Make2dPoint(AA, basis, BB, B);
@@ -251,12 +305,29 @@ Type IntegarteDirection(const vector<Type>& squares, const Type scuare_surface) 
 }
 Type IntegarteDirection(const int num_cell, const vector<Type>& Illum, const vector<Type>& squares, const Type scuare_surface) {
 	Type res = 0;
-	int n = squares.size();
-	int m = Illum.size() / n;
+	int n = squares.size();  // number of directions
+	int m = Illum.size() / n;  // number of cells
+
+	std::vector<pair<Type, Type>> I(n);
+
+
+	for (size_t i = 0; i < n; i++) {
+		I[i] = make_pair(Illum[m * i + num_cell], squares[i]);
+	}
+
+	auto cmp{ [](const pair<Type,Type> left, const pair<Type,Type> right) {
+
+		return left.first < right.first;
+} };
+	std::sort(I.begin(), I.end(), cmp);
 	
 	for (size_t i = 0; i < n; i++) {
+		res += I[i].first * I[i].second;
+	}
+	
+	/*for (size_t i = 0; i < n; i++) {
 		res += Illum[m * i + num_cell] * squares[i];
-		}
+		}*/
 
 	return res / scuare_surface;
 }
@@ -469,21 +540,22 @@ int GetPointIdOppositeFace(vtkCell* cell_tetra, const size_t num_face) {
 	return -1;
 };
 
-Type GetValueInCenterCell(const int num_cell, vtkCell* cur_cell, const Vector3 center, const Vector3 direction,
+Type GetValueInCenterCell(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cur_cell, const Vector3 center, const Vector3 direction,
 	const Eigen::Matrix4d& vertex_tetra, const std::map<int, Vector3>& nodes_value, const std::vector<int>& all_pairs_face,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate,
 	const Matrix3& straight_face, const Matrix3& inclined_face, const Matrix3& transform_matrix, const Vector3& start_point_plane_coord) {
 	/*Все грани должно быть определены*/
-	Type value = 0;
+	Type value = -666;
 	Vector3 x0;
 
 	for (size_t i = 0; i < 4; i++) {
 
 		IntersectionWithPlane(cur_cell->GetFace(i), center, direction, x0);
-		if (InTriangle(cur_cell->GetFace(i), x0)) {
-
+		if (InTriangle(num_cell, unstructuredgrid, cur_cell,i, x0)) {
+			if ((center - x0).dot(direction) <= 0) continue;
 			Type s = (center - x0).norm();
 			int global_num_in_face = Min(all_pairs_face[num_cell * 4 + i], num_cell * 4 + i);
+			//if (global_num_in_face == -1)global_num_in_face = num_cell * 4 + i;
 
 			Type I_x0 = CalculateIllumeOnInnerFace(i, global_num_in_face, vertex_tetra, center, x0, nodes_value,
 				straight_face, inclined_face,  transform_matrix, start_point_plane_coord);
@@ -492,12 +564,14 @@ Type GetValueInCenterCell(const int num_cell, vtkCell* cur_cell, const Vector3 c
 			break;
 		}
 	}
-
+	//if (value < 0) cout << "GetValueInCenterCell" << num_cell << " <0 \n";
+	if (value < 0)
+		return 0;
 	return value;
 }
 
 
-int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_out_face, const int* face_state,
+int GetNodesValues(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid,vtkCell* cur_cell, const int num_cur_out_face, const int* face_state,
 	const Vector3& direction, const Eigen::Matrix4d& vertex_tetra,
 	std::map<int, Vector3>& nodes_value, const std::vector<int>& all_pairs_face,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate,
@@ -517,7 +591,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			node[2] = straight_face.row(num_node)[1];
 			FromLocalToGlobalTetra(vertex_tetra, node, x);  // x->координата узла на выходящей грани
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 		}
@@ -529,7 +603,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			node[2] = straight_face.row(num_node)[1];
 			FromLocalToGlobalTetra(vertex_tetra, node, x);  // x->координата узла на выходящей грани
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid,cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 		}
@@ -541,7 +615,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			node[2] = 0;
 			FromLocalToGlobalTetra(vertex_tetra, node, x);  // x->координата узла на выходящей грани
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid,cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 		}
@@ -556,7 +630,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			FromLocalToGlobalTetra(vertex_tetra, node, x);
 		
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 		}
@@ -572,7 +646,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			//Важен номер прямой грани. + значение 3 координаты 
 			FromLocalToGlobalTetra(vertex_tetra, straight_face.row(num_node), x);  // x->координата узла на выходящей грани
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid,cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 
@@ -584,7 +658,7 @@ int GetNodesValues(const int num_cur_cell, vtkCell* cur_cell, const int num_cur_
 			Vector3 local_tetra_x = x;
 			FromTetraToPlane(transform_matrix, start_point_plane_coord, local_tetra_x, x);
 
-			CalculateNodeValue(num_cur_cell, cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
+			CalculateNodeValue(num_cur_cell, unstructuredgrid,cur_cell, num_cur_out_face, face_state, direction, nodes_value, all_pairs_face,
 				density, absorp_coef, rad_en_loose_rate, num_node, vertex_tetra, x,
 				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 		}
@@ -616,7 +690,59 @@ int NormalToFace(vtkCell* cell_face, Vector3& n) {
 	n.normalize();
 	return 0;
 }
+size_t NormalToFace(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, int number_face, Vector3& n) {
+	
+	vtkSmartPointer<vtkIdList> idp = unstructured_grid->GetCell(num_cell)->GetFace(number_face)->GetPointIds();
 
+	Type P0[3], P1[3], P2[3];
+	
+	unstructured_grid->GetPoints()->GetPoint(idp->GetId(0), P0);
+	unstructured_grid->GetPoints()->GetPoint(idp->GetId(1), P1);
+	unstructured_grid->GetPoints()->GetPoint(idp->GetId(2), P2);
+
+	Type a[3], b[3];
+	for (size_t i = 0; i < 3; i++) {
+		a[i] = P1[i] - P0[i];
+		b[i] = P2[i] - P0[i];
+	}
+	n[0] = a[1] * b[2] - a[2] * b[1];
+	n[1] = -a[0] * b[2] + a[2] * b[0];
+	n[2] = a[0] * b[1] - a[1] * b[0];
+
+	
+	n.normalize();
+
+	vtkSmartPointer<vtkIdList> idp2 = unstructured_grid->GetCell(num_cell)->GetPointIds();
+
+	size_t id;
+	for (size_t i = 0; i < 4; i++) {
+		int count = 0;
+		for (size_t j = 0; j < 3; j++)
+			if (idp2->GetId(i) != idp->GetId(j))
+				count++;
+		if (count == 3) {
+			id = i;
+			break;
+		}
+
+	}
+
+	Type sum = 0;
+	Type P3[3];
+	unstructured_grid->GetCell(num_cell)->GetPoints()->GetPoint(idp2->GetId(id), P3);
+
+
+	sum = P1[0] * (P2[1] - P3[1]) * P0[2] + P0[0] * (P3[1] - P2[1]) * P1[2] +
+		P0[0] * (P1[1] - P3[1]) * P2[2] + P2[2] * (P1[0] * P3[1] - P1[0] * P0[1]) +
+		P3[0] * (P0[2] * (P1[1] - P2[1]) + P1[2] * (P2[1] - P0[1]) + P2[2] * (P0[1] - P1[1]))
+		+ P3[2] * (P1[0] * (P0[1] - P2[1]) + P0[0] * (P2[1] - P1[1])) +
+		P2[0] * (P0[2] * (P3[1] - P1[1]) + P1[2] * (P0[1] - P3[1]) + P3[2] * (P1[1] - P0[1]));
+
+	if (sum < 0)
+		for (size_t i = 0; i < 3; i++)
+			n[i] *= -1;
+	return 0;
+}
 int NormalsToCell(vtkCell* cell_tetra, Eigen::Matrix<Type, 4, 3>& normals) {
 
 	Vector3 n;
@@ -642,7 +768,18 @@ int NormalsToCell(vtkCell* cell_tetra, Eigen::Matrix<Type, 4, 3>& normals) {
 	}
 	return 0;
 }
+int NormalsToCell(const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Eigen::Matrix<Type, 4, 3>& normals) {
 
+	Vector3 n;
+
+	for (int i = 0; i < 4; i++) {
+		NormalAndSquareFace(NumberCell, i, unstructuredgrid, n);
+
+		for (size_t j = 0; j < 3; j++)
+			normals(i, j) = n[j];
+	}
+	return 0;
+}
 int MakeFileCellData(const std::string name_file, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, bool rewrite_if_exist) {
 	/*
 	* FILE STRUCTURED
@@ -714,15 +851,91 @@ size_t MakeEnergy(const vector<Type>& Illum, const vector<Type>& squares,const T
 	return 0;
 }
 
+
+size_t NormalAndSquareFace(size_t NumberCell, size_t NumberFace, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, Vector3& n) {
+	vtkSmartPointer<vtkIdList> idp = unstructuredgrid->GetCell(NumberCell)->GetFace(NumberFace)->GetPointIds();
+
+	Type P0[3], P1[3], P2[3];
+	unstructuredgrid->GetPoint(idp->GetId(0), P0);
+	unstructuredgrid->GetPoint(idp->GetId(1), P1);
+	unstructuredgrid->GetPoint(idp->GetId(2), P2);
+
+	Type a[3], b[3];
+	for (size_t i = 0; i < 3; i++) {
+		a[i] = P1[i] - P0[i];
+		b[i] = P2[i] - P0[i];
+	}
+	n[0] = a[1] * b[2] - a[2] * b[1];
+	n[1] = -a[0] * b[2] + a[2] * b[0];
+	n[2] = a[0] * b[1] - a[1] * b[0];
+
+	n.normalize();
+
+	vtkSmartPointer<vtkIdList> idp2 = unstructuredgrid->GetCell(NumberCell)->GetPointIds();
+
+	size_t id;
+	for (size_t i = 0; i < 4; i++) {
+		int count = 0;
+		for (size_t j = 0; j < 3; j++)
+			if (idp2->GetId(i) != idp->GetId(j))
+				count++;
+		if (count == 3) {
+			id = i;
+			break;
+		}
+
+	}
+
+	Type sum = 0;
+	Type P3[3];
+	unstructuredgrid->GetPoint(idp2->GetId(id), P3);
+	/*for (size_t i = 0; i < 3; i++){
+		sum += n[i] * (P3[i] - P0[i]);
+	}*/
+
+	sum = P1[0] * (P2[1] - P3[1]) * P0[2] + P0[0] * (P3[1] - P2[1]) * P1[2] +
+		P0[0] * (P1[1] - P3[1]) * P2[2] + P2[2] * (P1[0] * P3[1] - P1[0] * P0[1]) +
+		P3[0] * (P0[2] * (P1[1] - P2[1]) + P1[2] * (P2[1] - P0[1]) + P2[2] * (P0[1] - P1[1]))
+		+ P3[2] * (P1[0] * (P0[1] - P2[1]) + P0[0] * (P2[1] - P1[1])) +
+		P2[0] * (P0[2] * (P3[1] - P1[1]) + P1[2] * (P0[1] - P3[1]) + P3[2] * (P1[1] - P0[1]));
+
+	if (sum < 0)
+		for (size_t i = 0; i < 3; i++)
+			n[i] *= -1;
+	return 0;
+}
+int FindInAndOutFaces(const Vector3& direction, const int NumberCell,const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, int* face_state) {
+	//face_state  -0=> выходящая грань,  1=> входящая  face_state.size=4!!!  
+
+	Vector3 normal;
+
+	for (size_t i = 0; i < 4; ++i) {
+
+
+		NormalAndSquareFace(NumberCell, i, unstructuredgrid, normal);
+		const Type eps = 1e-6;
+		if (normal.dot(direction) < -eps)
+			face_state[i] = 1;
+		else if (normal.dot(direction) > eps)
+			face_state[i] = 0;
+		else
+			std::cout << "FindInAndOutFaces: error directions\n";
+	}
+
+	return 0;
+}
 int FindInAndOutFaces(const Vector3  direction, vtkCell* cur_cell_tetra, int* face_state) {
 	//face_state  -0=> выходящая грань,  1=> входящая  face_state.size=4!!!  
 
 	Vector3 normal;
+
 	for (size_t i = 0; i < 4; ++i) {
 
+
+//		NormalToFace(cur_cell_tetra, i, normal);
 		NormalToFace(cur_cell_tetra->GetFace(i), normal);
 
-		if (normal.dot(direction) >= 0)
+		if (normal.dot(direction) <= 0)
 			face_state[i] = 1;
 		else
 			face_state[i] = 0;
@@ -737,7 +950,7 @@ int InitNodesValue(const std::vector<int>& all_pairs_face, std::map<int, Vector3
 	for (size_t i = 0; i < n; ++i)
 	{
 		if (i < all_pairs_face[i])
-			nodes_value.insert({ i, Vector3(-2,-2,-2) });
+			nodes_value.insert({ i, Vector3(-666,-666,-666) });
 	}
 	return 0;
 }

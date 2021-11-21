@@ -27,7 +27,7 @@ typedef Eigen::Matrix3d Matrix3;
 
 #include"short_characteristics_calculations.h"  // NormalsToCell
 
-int MainBuildGraphs(int argc, char* argv);
+int MainBuildGraphs(int argc, char* argv[]);
 
 bool CheckCell(const IntId id_cell, const Vector3& direction, const vtkSmartPointer<vtkUnstructuredGrid>& u_grid,
 	std::vector<IntId>& faces_state, const std::vector<IntId>& all_pairs_id);

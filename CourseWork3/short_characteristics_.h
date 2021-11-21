@@ -49,11 +49,13 @@ Type Distance(const Type point1_x, const Type point1_y, const Type point1_z,
 	const Type point2_x, const Type point2_y, const Type point2_z);
 
 size_t Make2dPoint(const Type* start, Type**& local_basis, const Type* point, Type* new_point);
+
 Type MakeLength(Type* point1, Type* point2);
 Type Norm(const Type* vec);
 size_t Normalize(Type* vec);
 Type Rosh(const Type* S, Type*& a, Type t);
 size_t SetBasis(const Type* start_point, const Type* normal, Type* vec_1, Type* vec_2);
+
 size_t SetDirect(const Type* start, const Type* end, Type* direct);
 size_t ReadFileVtk(const size_t class_file_vtk, const std::string name_file_vtk, vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid,
 	vtkDataArray*& density, vtkDataArray*& absorp_coef, vtkDataArray*& rad_en_loose_rate, const bool is_print = false);
