@@ -1,3 +1,18 @@
-﻿  short_characteristics_main.cpp
+﻿  BigFunction.cpp
+  The contents of <execution> are available only with C++17 or later.
+  short_characteristics_build_graph.cpp
+  The contents of <execution> are available only with C++17 or later.
+  short_characteristics_calculations.cpp
+  The contents of <execution> are available only with C++17 or later.
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(26): warning #589: transfer of control bypasses initialization of:
+              variable "local_plane_x0" (declared at line 28)
+    		switch (num_in_face) {
+    		^
+  
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(767): warning #1491: definition from the enclosing scope variable "i" (declared at line 750) :is used. definition from the for loop variable "i" (declared at line 756) is ignored
+    			normals(i, j) = n[j];
+    			        ^
+  
+  short_characteristics_main.cpp
   The contents of <execution> are available only with C++17 or later.
   CourseWork3.vcxproj -> D:\Desktop\МГТУ\CourseWork3\Release\CourseWork3.exe

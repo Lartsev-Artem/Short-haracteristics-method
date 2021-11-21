@@ -1,5 +1,5 @@
 ﻿icl: : warning #10182: disabling optimization; runtime debug checks enabled
-  short_characteristics_build_graph.cpp
+  BigFunction.cpp
   The contents of <execution> are available only with C++17 or later.
   short_characteristics_calculations.cpp
   The contents of <execution> are available only with C++17 or later.
@@ -12,5 +12,3 @@ D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculatio
     			normals(i, j) = n[j];
     			        ^
   
-  short_characteristics_main.cpp
-  The contents of <execution> are available only with C++17 or later.

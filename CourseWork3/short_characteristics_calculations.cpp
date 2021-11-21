@@ -918,9 +918,11 @@ int FindInAndOutFaces(const Vector3& direction, const int NumberCell,const vtkSm
 			face_state[i] = 1;
 		else if (normal.dot(direction) > eps)
 			face_state[i] = 0;
-		else
-			std::cout << "FindInAndOutFaces: error directions\n";
-	}
+		else {
+			face_state[i] = 1;
+			//std::cout << "FindInAndOutFaces: error directions\n";
+		}
+		}
 
 	return 0;
 }

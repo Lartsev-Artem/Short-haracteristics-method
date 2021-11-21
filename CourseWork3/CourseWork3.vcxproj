@@ -167,6 +167,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BigFunction.cpp" />
     <ClCompile Include="short_characteristics_build_graph.cpp" />
     <ClCompile Include="short_characteristics_calculations.cpp" />
     <ClCompile Include="short_characteristics_main.cpp" />

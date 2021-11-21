@@ -24,6 +24,9 @@
     <ClCompile Include="short_characteristics_build_graph.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="BigFunction.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="short_characteristics_.h">

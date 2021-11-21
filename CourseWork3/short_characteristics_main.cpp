@@ -8,6 +8,9 @@ Matrix3 inverse_transform_matrix;  // матрица перехода из плоскости в базовый те
 Matrix3	straight_face;  // 3 узла интерпол€ции
 Matrix3 inclined_face;  // 3 узла интерпол€ции на наклонной плоскости
 
+std::vector<Type> Illum2;
+
+
 Vector3 center_local_sphere;  // центр описанной сферы около стандартного тетраэдра
 
 int GetAverageSizeCell(const std::string name_file_vtk) {
@@ -291,20 +294,19 @@ int TestGetNodes(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGr
 	return 0;
 }
 
-
 int main(int argc, char* argv[])
 {
-
 	std::string name_file_settings;
 	name_file_settings = "D:\\Desktop\\FilesCourse\\settings_file.txt";
 
-	std::string main_file_direction = "D:\\Desktop\\FilesCourse\\";
+	//std::string main_file_direction = "D:\\Desktop\\FilesCourse\\";
 
 	size_t class_file_vtk;
 	std::string name_file_vtk;
 	std::string name_file_sphere_direction;
-	std::string name_file_graph = main_file_direction + "GraphDirections\\Direction660\\Sphere565\\graph"; //"TestClaster\\graph";//"GraphDirections\\graph";
+	std::string name_file_graph;// = main_file_direction + "GraphDirections\\Direction660\\Sphere565\\graph"; //"TestClaster\\graph";//"GraphDirections\\graph";
 	std::string out_file_grid_vtk;
+	std::string out_file_E1d;
 
 
 	//TransformFileDecartToSphere(name_file_sphere_direction, name_file_sphere_direction+"1.txt");
@@ -312,7 +314,7 @@ int main(int argc, char* argv[])
 	//return 0;
 	
 	
-	if (ReadStartSettings(name_file_settings, class_file_vtk, name_file_vtk, name_file_sphere_direction, out_file_grid_vtk)) {
+	if (ReadStartSettings(name_file_settings, class_file_vtk, name_file_vtk, name_file_sphere_direction, out_file_grid_vtk, name_file_graph, out_file_E1d)) {
 
 		std::cout << "Error reading the start settings\n";
 		return 1;
@@ -390,89 +392,93 @@ int main(int argc, char* argv[])
 	_clock += omp_get_wtime();
 	std::cout << "\n Finding time of the all_pairs_face: " << _clock << "\n";
 
-
 	std::map<int, Vector3> nodes_value;
 	InitNodesValue(all_pairs_face, nodes_value);  // выделение пам€ти под узловые значени€(без инициализации)
 
-
+	
 	const int count_direction = directions.size() / 2;
 
 	// значени€ излучени€ в центре €чеек (dir^k*N_dir+N_cell) \
 	номер строки --- направление, столбец --- €чейка
 
 	std::vector<Type> Illum(unstructured_grid->GetNumberOfCells() * count_direction);
+	
+	Start(name_file_graph, unstructured_grid, all_pairs_face, nodes_value, directions, squares, square_surface, density, absorp_coef, rad_en_loose_rate, Illum);
 
-	Vector3 direction; // главное направление
-
-	/*---------------------------------- далее FOR по направлени€м----------------------------------*/
-	for (int num_direction = 0; num_direction < count_direction; ++num_direction) 
 	{
-	//	int num_direction = 0;
-		FromSphericalToDecart(num_direction, directions, direction);
+		//Vector3 direction; // главное направление
 
-		//direction = Vector3(1, 0, 0);
+		///*---------------------------------- далее FOR по направлени€м----------------------------------*/
+		//for (int num_direction = 0; num_direction < count_direction; ++num_direction)
+		//{
+		//	//	int num_direction = 0;
+		//	FromSphericalToDecart(num_direction, directions, direction);
 
-		_clock = -omp_get_wtime();
-		//SortCellsGrid(direction, unstructured_grid, sorted_id_cell, centers_tetra);
-		ReadGraph(name_file_graph + to_string(num_direction) + ".txt", sorted_id_cell);
-		_clock += omp_get_wtime();
-		std::cout << "\n Sort" << num_direction << " time : " << _clock << '\n';
+		//	//direction = Vector3(1, 0, 0);
 
-	//	std::reverse(sorted_id_cell.begin(), sorted_id_cell.end());
+		//	_clock = -omp_get_wtime();
+		//	//SortCellsGrid(direction, unstructured_grid, sorted_id_cell, centers_tetra);
+		//	ReadGraph(name_file_graph + to_string(num_direction) + ".txt", sorted_id_cell);
+		//	_clock += omp_get_wtime();
+		//	std::cout << "\n Sort" << num_direction << " time : " << _clock << '\n';
 
-		Vector3 x;
-		Vector3 x0;
-		Eigen::Matrix<Type, 4, 3> normals;
+		//	//	std::reverse(sorted_id_cell.begin(), sorted_id_cell.end());
 
-		int num_cell;
-		/*---------------------------------- далее FOR по €чейкам----------------------------------*/
-		for (int h = 0; h < unstructured_grid->GetNumberOfCells(); ++h) {
-			num_cell = sorted_id_cell[h];
+		//	Vector3 x;
+		//	Vector3 x0;
+		//	Eigen::Matrix<Type, 4, 3> normals;
 
-			SetVertexMatrix(num_cell, unstructured_grid, vertex_tetra);
+		//	int num_cell;
+		//	/*---------------------------------- далее FOR по €чейкам----------------------------------*/
+		//	for (int h = 0; h < unstructured_grid->GetNumberOfCells(); ++h) {
+		//		num_cell = sorted_id_cell[h];
 
-			int face_state[4];  // 0=> выход€ща€ грань,  1=> вход€ща€   
-			//FindInAndOutFaces(direction, unstructured_grid->GetCell(num_cell), face_state);
-			FindInAndOutFaces(direction, num_cell, unstructured_grid, face_state);
+		//		SetVertexMatrix(num_cell, unstructured_grid, vertex_tetra);
 
-			NormalsToCell(num_cell, unstructured_grid, normals);
-		//	NormalsToCell(unstructured_grid->GetCell(num_cell), normals);
+		//		int face_state[4];  // 0=> выход€ща€ грань,  1=> вход€ща€   
+		//		//FindInAndOutFaces(direction, unstructured_grid->GetCell(num_cell), face_state);
+		//		FindInAndOutFaces(direction, num_cell, unstructured_grid, face_state);
 
-			if ((num_cell == 2114 || num_cell == 2178) &&false) {
-					PrintCurCell(unstructured_grid->GetCell(num_cell));
-					PrintTransformTetra(vertex_tetra, unstructured_grid->GetCell(num_cell));
-					// перенос точки с выход€щей грани на вход€щую(получение точки на вход€щей грани)
-			}
-			{			
+		//		NormalsToCell(num_cell, unstructured_grid, normals);
+		//		//	NormalsToCell(unstructured_grid->GetCell(num_cell), normals);
 
-				for (size_t num_out_face = 0; num_out_face < 4; ++num_out_face) {
-					if (!face_state[num_out_face])  // выход€щие грани
-						TestGetNodes(num_cell, unstructured_grid, unstructured_grid->GetCell(num_cell), num_out_face, vertex_tetra, face_state, direction, 
-							nodes_value, all_pairs_face,
-							normals);
-						//GetNodesValues(num_cell, unstructured_grid->GetCell(num_cell), num_out_face, face_state, direction, vertex_tetra, nodes_value, all_pairs_face, \
-							density, absorp_coef, rad_en_loose_rate, \
-							straight_face, inclined_face, transform_matrix, inverse_transform_matrix, start_point_plane_coord);
-				}
-				Vector3 center;
-				CenterOfTetra(num_cell, unstructured_grid, center);
-				Type I_k_dir = GetValueInCenterCell(num_cell, unstructured_grid, unstructured_grid->GetCell(num_cell), center, direction, vertex_tetra, nodes_value, all_pairs_face,
-					density, absorp_coef, rad_en_loose_rate,
-					straight_face, inclined_face, transform_matrix, start_point_plane_coord);
+		//		if ((num_cell == 2114 || num_cell == 2178) && false) {
+		//			PrintCurCell(unstructured_grid->GetCell(num_cell));
+		//			PrintTransformTetra(vertex_tetra, unstructured_grid->GetCell(num_cell));
+		//			// перенос точки с выход€щей грани на вход€щую(получение точки на вход€щей грани)
+		//		}
+		//		{
 
-				Illum[num_direction * unstructured_grid->GetNumberOfCells() + num_cell] = I_k_dir;
+		//			for (size_t num_out_face = 0; num_out_face < 4; ++num_out_face) {
+		//				if (!face_state[num_out_face])  // выход€щие грани
+		//					TestGetNodes(num_cell, unstructured_grid, unstructured_grid->GetCell(num_cell), num_out_face, vertex_tetra, face_state, direction,
+		//						nodes_value, all_pairs_face,
+		//						normals);
+		//				//GetNodesValues(num_cell, unstructured_grid->GetCell(num_cell), num_out_face, face_state, direction, vertex_tetra, nodes_value, all_pairs_face, \
+		//					density, absorp_coef, rad_en_loose_rate, \
+		//					straight_face, inclined_face, transform_matrix, inverse_transform_matrix, start_point_plane_coord);
+		//			}
+		//			Vector3 center;
+		//			CenterOfTetra(num_cell, unstructured_grid, center);
+		//			Type I_k_dir = GetValueInCenterCell(num_cell, unstructured_grid, unstructured_grid->GetCell(num_cell), center, direction, vertex_tetra, nodes_value, all_pairs_face,
+		//				density, absorp_coef, rad_en_loose_rate,
+		//				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
 
-				/*int buf = num_cell;
-				if (all_pairs_face[num_cell] < num_cell && all_pairs_face[num_cell] != -1) buf = all_pairs_face[num_cell];
-				Illum[num_direction * unstructured_grid->GetNumberOfCells() + num_cell] = nodes_value.find(buf)->second[0];*/ //I_k_dir;
-			}
+		//			Illum[num_direction * unstructured_grid->GetNumberOfCells() + num_cell] = I_k_dir;
 
-		}
-		/*---------------------------------- конец FOR по €чейкам----------------------------------*/
+		//			/*int buf = num_cell;
+		//			if (all_pairs_face[num_cell] < num_cell && all_pairs_face[num_cell] != -1) buf = all_pairs_face[num_cell];
+		//			Illum[num_direction * unstructured_grid->GetNumberOfCells() + num_cell] = nodes_value.find(buf)->second[0];*/ //I_k_dir;
+		//		}
 
-		std::cout << "End direction number: " << num_direction << '\n';
+		//	}
+		//	/*---------------------------------- конец FOR по €чейкам----------------------------------*/
+
+		//	std::cout << "End direction number: " << num_direction << '\n';
+		//}
+		///*---------------------------------- конец FOR по направлени€м----------------------------------*/
 	}
-	/*---------------------------------- конец FOR по направлени€м----------------------------------*/
+
 
 	vector<Type> energy(unstructured_grid->GetNumberOfCells());
 	MakeEnergy(Illum, squares, square_surface, energy);
@@ -480,7 +486,7 @@ int main(int argc, char* argv[])
 	WriteFileSolution(out_file_grid_vtk, energy, unstructured_grid);
 //	WriteFileSolution(out_file_grid_vtk, sorted_id_cell, unstructured_grid);
 
-	GetFunction(out_file_grid_vtk, main_file_direction + "E.txt");
+	GetFunction(out_file_grid_vtk, out_file_E1d);
 
 	return 0;
 }
