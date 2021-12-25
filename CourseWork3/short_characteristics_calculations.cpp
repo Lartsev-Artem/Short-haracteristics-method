@@ -1,6 +1,7 @@
 #include"short_characteristics_calculations.h"
 
 Type BoundaryFunction(const Vector3 x) {
+
 	return 0;
 }
 
@@ -919,7 +920,7 @@ int FindInAndOutFaces(const Vector3& direction, const int NumberCell,const vtkSm
 		else if (normal.dot(direction) > eps)
 			face_state[i] = 0;
 		else {
-			face_state[i] = 1;
+			face_state[i] = 0;  // если грань параллельна, считаем, что она не является определяющей
 			//std::cout << "FindInAndOutFaces: error directions\n";
 		}
 		}
@@ -1182,8 +1183,12 @@ size_t ReadFileVtk(const size_t class_file_vtk, const std::string name_file_vtk,
 size_t FromDecartToSphere(const Type* decart, Type& fi, Type& theta) {
 	Type x = decart[0];
 	Type y = decart[1];
+	Type z = decart[2];
 
 	//cout << x * x + y * y + decart[2] * decart[2] << '\n';
+	/*
+	fi = atan2(x, z);
+	theta = atan2(hypot(x, z), y);*/
 
 	theta = atan(sqrt(x * x + y * y) / decart[2]) + PI / 2;
 

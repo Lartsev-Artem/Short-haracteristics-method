@@ -18,13 +18,13 @@ typedef double Type;
 typedef int IntId ;
 #define PI 3.14159265358979323846
 
-//#include<vtk-9.0/vtkUnstructuredGrid.h>
+#include<vtk-9.0/vtkUnstructuredGrid.h>
 
 #ifdef FIGHT_GRID
 #include <map>
 #include <eigen3/Eigen/Dense>
 
-Type r_inner = 0.55;
+Type r_inner = 0.5;
 Eigen::Vector3d center_point(0, 0, 0);
 struct Cell {
 	Type P[3];
@@ -33,6 +33,7 @@ struct Cell {
 };
 
 std::map<int, Cell> inner_bound;  //*global id face, vertex of face*/
+std::set<int> inner_out_id;
 
 int ReadInnerBoundary(const std::string name_file_inner_boundary, std::map<int, Cell>& inner_bound_loc) {
 
@@ -584,10 +585,11 @@ bool CheckCell(const IntId id_cell, const Type* direction, const std::vector<Typ
 	for (size_t i = 0; i < 4; i++)
 		if (face_state[i]) {
 			
-			if (all_pairs_id[id_cell * 4 + i] == -1 && faces_state[id_cell * 4 + i] == 0) { // внутренн€€  сфера граница 
+			int id_face = id_cell * 4 + i;
+			if (all_pairs_id[id_face] == -1 && faces_state[id_face] == 0&&false) { // внутренн€€  сфера граница 
 				// Find Cell если все €чейки дл€ 3х вершин грани определены, то continue
 				// трасировка из вершин по направлению (Ќ”∆Ќј —≈“ ј)
-				FindIdCellInBoundary(direction, inner_bound, id_cell * 4 + i, id);
+				FindIdCellInBoundary(direction, inner_bound, id_face, id);
 
 				//if (id[0] != -1 || id[1] != -1 || id[2] != -1)
 				//	cout << "id\n";
@@ -596,6 +598,7 @@ bool CheckCell(const IntId id_cell, const Type* direction, const std::vector<Typ
 						if (faces_state[id[k]] == 0)
 							return false;
 				}
+				//inner_out_id.erase(id_cell);
 				return true;
 
 			}
@@ -659,6 +662,7 @@ int ReBuildSetBondary(const IntId id_cell, const Type* direction, std::set<IntId
 	FindInAndOutFaces(direction, id_cell, normals, face_state);
 	//FindInAndOutFaces(direction, u_grid->GetCell(id_cell), face_state);
 
+#ifndef FIGHT_GRID
 	for (size_t i = 0; i < 4; i++)
 		if (face_state[i] == 0) {
 			int num_face = all_pairs_id[id_cell * 4 + i];
@@ -672,7 +676,46 @@ int ReBuildSetBondary(const IntId id_cell, const Type* direction, std::set<IntId
 			}
 		}
 	boundary_id.erase(id_cell);
-
+#else
+	for (size_t i = 0; i < 4; i++)
+		if (face_state[i] == 0) {
+			int num_face = all_pairs_id[id_cell * 4 + i];
+			if (num_face != -1) {
+				int buf_s = set_graph.size();
+				set_graph.emplace(num_face / 4);
+				if (set_graph.size() != buf_s) {
+					boundary_id.emplace(num_face / 4);
+					set_graph.erase(num_face / 4);
+				}
+			}
+			else {
+				if (inner_bound.count(id_cell * 4 + i))
+				{
+					//добавить элементы на другом конце сферы
+					{
+						int id[3];
+						FindIdCellInBoundary(direction, inner_bound, id_cell * 4 + i, id);
+						if (id[0] != -1) {
+							//if (faces_state[id[0]] == 0)
+								int buf_s = set_graph.size();
+							set_graph.emplace(id[0] / 4);
+							if (set_graph.size() != buf_s) {
+								boundary_id.emplace(id[0] / 4);
+								faces_state[id[0]] = 1;
+								set_graph.erase(id[0] / 4);
+								inner_out_id.erase(id[0] / 4);
+							}
+						}
+					}
+					
+					//return 0;// не удал€ть €чейку с границы если она на врнутренней границе
+				}
+			}
+		}
+	//если это внутренн€ граница сразу не удал€ть!
+	
+	boundary_id.erase(id_cell);
+#endif
 	return 0;
 }
 
@@ -715,7 +758,7 @@ int WriteStringToFile(const std::string name_file, char* str, std::ios::openmode
 
 int mainWork(int argc, char* argv[]) {
 
-#ifdef vtkUnstructuredGrid_h
+#ifndef vtkUnstructuredGrid_h
 	std::string main_file_direction = "D:\\Desktop\\FilesCourse\\TestClaster\\";
 
 	std::string name_file_grid = "D:\\Desktop\\FilesCourse\\MySphere.vtk";
@@ -929,8 +972,10 @@ int FindIdCellInBoundary(const Type* direction,  const std::map<int, Cell>& inne
 	id[1] = -1;
 	id[2] = -1;
 
-	if (!inner_bound.count(cur)) return 0;
-	
+	if (!inner_bound.count(cur)) {
+		printf("Inner bound is empty??\n");
+		return 0;
+	}
 	Type vertex_1[3] = { inner_bound.find(cur)->second.P[0],inner_bound.find(cur)->second.P[1],inner_bound.find(cur)->second.P[2] };
 	Type vertex_2[3] = { inner_bound.find(cur)->second.P1[0],inner_bound.find(cur)->second.P1[1],inner_bound.find(cur)->second.P1[2] };
 	Type vertex_3[3] = { inner_bound.find(cur)->second.P2[0],inner_bound.find(cur)->second.P2[1],inner_bound.find(cur)->second.P2[2] };
@@ -974,6 +1019,24 @@ int FindIdCellInBoundary(const Type* direction,  const std::map<int, Cell>& inne
 
 	return 0;
 }
+
+int FindOutInnerCell(const std::map<int, Cell>& inner_bound, const Type* dir, const std::vector<Type>& normals, set<int>& inner_out_id) {
+	int face[4];
+	inner_out_id.clear();
+	for (auto& el : inner_bound)
+	{
+		FindInAndOutFaces(dir, el.first/4, normals, face);
+
+		for (int i = 0; i < 4; i++){
+			if (face[i] == 1)// вход€ща€
+				if (el.first%4 == i)// граница сферы равна тек. грани
+					inner_out_id.emplace(el.first / 4);
+
+		}
+
+	}
+	return 0;
+}
 #endif // FIGHT_GRID
 
 #ifdef  vtkUnstructuredGrid_h
@@ -981,20 +1044,22 @@ size_t WriteFileBoundary(const std::string name_file_out, const std::string name
 
 	vtkSmartPointer<vtkUnstructuredGrid> unstructured_grid =
 		vtkSmartPointer<vtkUnstructuredGrid>::New();
-	vtkSmartPointer<vtkGenericDataObjectReader> reader_vtk =
-		vtkSmartPointer<vtkGenericDataObjectReader>::New();
-	reader_vtk->ReadAllScalarsOn();
-	reader_vtk->SetFileName(name_file_grid.c_str());
-	reader_vtk->Update();
+	{
+		vtkSmartPointer<vtkGenericDataObjectReader> reader_vtk =
+			vtkSmartPointer<vtkGenericDataObjectReader>::New();
+		reader_vtk->ReadAllScalarsOn();
+		reader_vtk->SetFileName(name_file_grid.c_str());
+		reader_vtk->Update();
 
-	if (reader_vtk->IsFileUnstructuredGrid()) {
-		unstructured_grid = reader_vtk->GetUnstructuredGridOutput();
-		unstructured_grid->Modified();
-	}
-	else {
-		std::cout << "Error read file\n";
-		std::cout << "file_vtk is not UnstructuredGrid\n";
-		return 1;
+		if (reader_vtk->IsFileUnstructuredGrid()) {
+			unstructured_grid = reader_vtk->GetUnstructuredGridOutput();
+			unstructured_grid->Modified();
+		}
+		else {
+			std::cout << "Error read file\n";
+			std::cout << "file_vtk is not UnstructuredGrid\n";
+			return 1;
+		}
 	}
 	int n = unstructured_grid->GetNumberOfCells();
 
@@ -1042,6 +1107,68 @@ size_t WriteFileBoundary(const std::string name_file_out, const std::string name
 	writer->Write();
 	return 0;
 }
+size_t WriteFileBoundary(const std::string name_file_out, const std::set<int>& id, const std::string name_file_grid) {
+
+	vtkSmartPointer<vtkUnstructuredGrid> unstructured_grid =
+		vtkSmartPointer<vtkUnstructuredGrid>::New();
+	{
+		vtkSmartPointer<vtkGenericDataObjectReader> reader_vtk =
+			vtkSmartPointer<vtkGenericDataObjectReader>::New();
+		reader_vtk->ReadAllScalarsOn();
+		reader_vtk->SetFileName(name_file_grid.c_str());
+		reader_vtk->Update();
+
+		if (reader_vtk->IsFileUnstructuredGrid()) {
+			unstructured_grid = reader_vtk->GetUnstructuredGridOutput();
+			unstructured_grid->Modified();
+		}
+		else {
+			std::cout << "Error read file\n";
+			std::cout << "file_vtk is not UnstructuredGrid\n";
+			return 1;
+		}
+	}
+	int n = unstructured_grid->GetNumberOfCells();
+
+	vtkSmartPointer<vtkIntArray> bound_array =
+		vtkSmartPointer<vtkIntArray>::New();
+
+	bound_array->SetNumberOfTuples(n);
+	for (size_t i = 0; i < n; i++)
+	{
+		bound_array->SetTuple1(i, 0);
+	}
+
+
+
+	for(auto el :id){
+		bound_array->SetTuple1(el, 1);
+	}
+	
+
+	vtkSmartPointer<vtkUnstructuredGrid> ungrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+
+	ungrid = unstructured_grid;
+	ungrid->GetCellData()->SetActiveScalars("energy");
+	ungrid->GetCellData()->SetScalars(bound_array);
+
+
+	vtkSmartPointer<vtkGenericDataObjectWriter> writer =
+		vtkSmartPointer<vtkGenericDataObjectWriter>::New();
+	writer->SetFileName(name_file_out.c_str());
+	writer->SetInputData(ungrid);
+	writer->Write();
+	return 0;
+}
+size_t WriteInnerSphere(const std::string name_file_out) {
+	
+	
+	
+	/*Type AA[3] = { inner_bound.find(num_cell)->second.P[0],inner_bound.find(num_cell)->second.P[1],inner_bound.find(num_cell)->second.P[2] };
+	Type BB[3] = { inner_bound.find(num_cell)->second.P1[0],inner_bound.find(num_cell)->second.P1[1],inner_bound.find(num_cell)->second.P1[2] };
+	Type CC[3] = { inner_bound.find(num_cell)->second.P2[0],inner_bound.find(num_cell)->second.P2[1],inner_bound.find(num_cell)->second.P2[2] };*/
+	return 0;
+}
 #endif //  vtkUnstructuredGrid_h
 
 int main(int argc, char* argv[]) {
@@ -1084,7 +1211,7 @@ int main(int argc, char* argv[]) {
 		Type direction[3];
 
 #pragma omp for 
-		for (int cur_direction = 0; cur_direction < directions.size() / 2; cur_direction++)
+		for (int cur_direction = 0; cur_direction<1/*cur_direction < directions.size() / 2*/; cur_direction++)
 		{
 			set_graph.clear();
 			ReadInitBoundarySet(name_file_boundary, set_boundary_cells);
@@ -1093,6 +1220,9 @@ int main(int argc, char* argv[]) {
 			direction[0] = 1;
 			direction[1] = 0;
 			direction[2] = 0;
+			FindOutInnerCell(inner_bound, direction, normals, inner_out_id);
+			//WriteFileBoundary(main_file_direction + "WTF1.vtk", inner_out_id, name_file_grid);
+
 			std::ofstream ofile;
 			ofile.open(name_file_graph + to_string(cur_direction) + ".txt");
 			if (!ofile.is_open()) {
@@ -1128,11 +1258,12 @@ int main(int argc, char* argv[]) {
 			printf("Graph construction in the direction # %d is completed\n", cur_direction);
 			//std::cout << "Graph construction in the direction #" << cur_direction << " is completed\n";
 			//WriteFileBoundary(main_file_direction + "Sphere565boundVTK.vtk", name_file_graph + "0.txt", unstructured_grid);
-			return -666;
+			//return -666;
 
 		}
 	}
-//	WriteFileBoundary(main_file_direction + "WTF.vtk",  name_file_graph + to_string(0) + ".txt", name_file_grid);
+	
+	WriteFileBoundary(main_file_direction + "WTF.vtk",  name_file_graph + to_string(0) + ".txt", name_file_grid);
 	return 0;
 }
 

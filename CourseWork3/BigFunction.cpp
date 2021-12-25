@@ -5,6 +5,38 @@ extern Matrix3 inverse_transform_matrix;  // матрица перехода из плоскости в баз
 
 extern Matrix3	straight_face;  // 3 узла интерпол€ции
 extern Matrix3 inclined_face;  // 3 узла интерпол€ции на наклонной плоскости
+extern int num_it;
+
+//unused
+Type GetSPart(const int num_cell, const Vector3& direction, const std::vector<Type>& illum_old,
+	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
+	//num_cell equals x
+	auto Gamma{ [](const Vector3& direction, const Vector3& direction2) {
+	return (3. * (1 + pow(direction.dot(direction2),2))) / 4;
+	} };
+
+
+	Vector3 cur_direction;
+	Type S = 0;
+	const int N_dir = directions.size() / 2;
+	const int N_cell = illum_old.size() / N_dir;
+
+	for (int num_direction = 0; num_direction < N_dir; num_direction++)
+	{		
+		FromSphericalToDecart(num_direction, directions, cur_direction);
+		if (direction.dot(cur_direction) > 0) continue;
+		S += Gamma(cur_direction, direction) * illum_old[num_direction * N_cell + num_cell] * squares[num_direction];
+	}
+	return 4 * PI * S / square_surface;
+}
+Type BoundaryFunction(const int id_cell, const Vector3& x, const Vector3& direction, const std::vector<Type>& illum_old,
+	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
+	//Type betta = 0.5;
+
+	//Type I0 = betta * GetSPart(id_cell, direction, illum_old, directions, squares, square_surface);
+
+	return 0;
+}
 
 Type GetS(const int num_cell, const Vector3& direction, const std::vector<Type>& illum_old,
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
@@ -22,28 +54,122 @@ Type GetS(const int num_cell, const Vector3& direction, const std::vector<Type>&
 	for (int num_direction = 0; num_direction < N_dir; num_direction++)
 	{
 		FromSphericalToDecart(num_direction, directions, cur_direction);
+		
 		S += Gamma(cur_direction, direction) * illum_old[num_direction * N_cell + num_cell] * squares[num_direction];
 	}
-	return 4*PI*S / square_surface;
+	return S / square_surface;     // было *4PI, но из-за нормировки Gamma разделили на 4PI
+}
+
+Type CalculateIllumeOnInnerFace(const int num_in_face, const int global_num_in_face, const Eigen::Matrix4d& vertex_tetra,
+	const Vector3& x, const Vector3& x0, const std::map<int, Vector3>& nodes_value,
+	const Matrix3& straight_face, const Matrix3& inclined_face, const Matrix3& transform_matrix, const Vector3& start_point_plane_coord,
+	const std::vector<Type>& illum_old,
+	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface, const Vector3& direction, const int num_cell) {
+	Type I_x0;
+	if (global_num_in_face == -1) {
+		/*√раничные услови€*/
+		I_x0 = BoundaryFunction(num_cell, x, direction, illum_old, directions, squares, square_surface);
+		return I_x0;
+	}
+	else {
+
+		if (nodes_value.find(global_num_in_face)->second[0] < -600)
+			cout << global_num_in_face << "CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
+
+		Vector3 x0_local;
+
+		FromGlobalToLocalTetra(vertex_tetra, x0, x0_local);
+		Vector3 coef;// = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+
+		switch (num_in_face) {
+		case 3:
+			Vector3 local_plane_x0;
+			FromTetraToPlane(transform_matrix, start_point_plane_coord, x0_local, local_plane_x0);
+
+			coef = GetInterpolationCoef(inclined_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = local_plane_x0[0] * coef[0] + local_plane_x0[1] * coef[1] + coef[2];
+
+			/*I_x0 = x0_local[1] * coef[0] + x0_local[2] * coef[1] + coef[2];
+			Vector3 coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);*/
+			break;
+		case 1:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[1] * coef[0] + x0_local[2] * coef[1] + coef[2];
+
+			break;
+		case 2:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[0] * coef[0] + x0_local[2] * coef[1] + coef[2];
+
+			break;
+		case 0:
+			coef = GetInterpolationCoef(straight_face, nodes_value.find(global_num_in_face)->second);
+			I_x0 = x0_local[0] * coef[0] + x0_local[1] * coef[1] + coef[2];
+
+			break;
+		}
+		if (I_x0 < 0) {
+			static int cc = 0;
+			//cout<< num_in_face<<"::" << cc++ << "num_face: " << global_num_in_face << ", I= " << I_x0 << '\n';
+			return 0;
+		}
+
+		return I_x0;
+	}
 }
 
 Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_node_prev, const Vector3& cur_direction,
 	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate, const std::vector<Type>& illum_old,
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
+	// без интеграла рассеивани€
+		{
+			/*Type Ie = 10 + GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
+			Type k = 10;
+			if (x.norm() > 0.3) { Ie = 0; k = 1; }
 
-	Type Ie = 10 + GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
-	Type k = 10;
-	if (x.norm() > 0.3) { Ie = 0; k = 1; }
+			Type I;
+			if (s > 1e-10)
+				I = Ie * (1 - exp(-s * k)) + I_node_prev * exp(-s * k);
+			else
+				I = Ie * (1 + s * k) - I_node_prev * s * k;
 
-	Type I;
-	if (s > 1e-10)
-		I = Ie * (1 - exp(-s * k)) + I_node_prev * exp(-s * k);
-	else
-		I = Ie * (1 + s * k) - I_node_prev * s * k;
+			if (I < 0)
+				I = 0;
+			return I;*/
+		}
+	
+		/*Type S = GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
+		Type Ie = 10;
+		Type k = 10;
+		if (x.norm() > 0.3) { Ie = 0; k = 1; }
 
-	if (I < 0)
-		I = 0;
-	return I;
+		S /= k;
+		Type I = exp(-s * k) * (I_node_prev - Ie - S) + (Ie + S);
+
+		if (I < 0)
+			I = 0;
+		return I;*/
+
+		Type S = GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
+		Type Ie = 10.;
+		Type alpha = 5.;
+		Type betta = 5.;
+		Type k = alpha + betta;
+		if (x.norm() > 0.3) {
+			Ie = 0;
+			alpha = 0.5;
+			betta = 0.5;
+			k = alpha + betta;
+		}
+
+		Type I = exp(-k * s) * (I_node_prev * k + (exp(k * s) - 1) * (Ie * alpha + S * betta));
+		I /= k;
+		//S /= k;
+		//Type I = exp(-s * k) * (I_node_prev - Ie - S) + (Ie + S);
+
+		if (I < 0)
+			I = 0;
+		return I;
 }
 
 int CalculateNodeValue(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cur_cell,
@@ -70,7 +196,7 @@ int CalculateNodeValue(const int num_cur_cell, const vtkSmartPointer<vtkUnstruct
 
 			// значение на вход€щей грани
 			Type I_x0 = CalculateIllumeOnInnerFace(num_in_face, global_num_in_face, vertex_tetra, x, x0, nodes_value,
-				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
+				straight_face, inclined_face, transform_matrix, start_point_plane_coord, illum_old, directions, squares, square_surface,direction, num_cur_cell);
 
 			int id = num_cur_cell * 4 + num_cur_out_face;
 			int global_num_out_face = Min(all_pairs_face[id], id);
@@ -167,6 +293,7 @@ Type NormIllum(const std::vector<Type>& Illum, const std::vector<Type>& Illum2) 
 	return max;
 }
 
+std::vector<Vector3> full_dir;
 int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, 
 	const std::vector<int>& all_pairs_face, std::map<int, Vector3>& nodes_value,
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface,
@@ -177,6 +304,43 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 	std::vector<Type> Illum2(Illum1.size(), 0);
 	vector<IntId> sorted_id_cell(unstructured_grid->GetNumberOfCells());
 	int count = 0;
+
+	ofstream ofile;
+	ofile.open("File_with_Logs.txt");
+	Type norm = 0;
+
+
+	{
+		
+		ifstream ifile("D:\\Desktop\\FilesCourse\\SphereDir660.txt");
+		int n = 0;
+		ifile >> n;
+		full_dir.resize(n);
+
+		Type buf;
+		for (size_t i = 0; i < n; i++)
+		{
+			ifile >> buf;
+			ifile >> full_dir[i][0] >> full_dir[i][1] >> full_dir[i][2];
+		}
+
+		ifile.close();
+
+		/*int cc = 0;
+		Vector3 dirSphere;
+		Vector3 dirDecart;
+		for (size_t i = 0; i < n; i++)
+		{
+			dirDecart = full_dir[i];
+			FromSphericalToDecart(i, directions, dirSphere);
+			if ((dirSphere - dirDecart).norm()>1) {
+				cc++;
+			}
+		}
+
+		cout << "Don't equals dir: " << cc << "\n";
+		return 666;*/
+	}
 
 	do {
 		Type _clock = -omp_get_wtime();
@@ -190,6 +354,7 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 			for (int num_direction = 0; num_direction < count_direction; ++num_direction)
 			{
 				FromSphericalToDecart(num_direction, directions, direction);
+				direction = full_dir[num_direction];
 				ReadGraph(name_file_graph + to_string(num_direction) + ".txt", sorted_id_cell);
 				InitNodesValue(all_pairs_face, nodes_value);
 
@@ -232,13 +397,24 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 		std::swap(Illum1, Illum2);
 		_clock += omp_get_wtime();
 		count++;
-
+		 norm = NormIllum(Illum1, Illum2);
+		std::cout << "Error:= " << norm << '\n';
 		std::cout << "Time of iter: " << _clock << '\n';
 		std::cout << "End iter_count number: " << count << '\n';
-	} while (NormIllum(Illum1, Illum2) > 5e-2 && count < 100);
+
+		ofile << "Error:= " << norm << '\n';
+		ofile << "Time of iter: " << _clock << '\n';
+		ofile << "End iter_count number: " << count << '\n';
+
+	} while (norm > 5e-2 && count < num_it);
 	
 	std::cout << "Count:= " << count << '\n';
 	std::cout << "Error:= " << NormIllum(Illum1, Illum2) << '\n';
 
+	ofile << "Count:= " << count << '\n';
+	ofile << "Error:= " << NormIllum(Illum1, Illum2) << '\n';
+	ofile.close();
+
+	std::swap(Illum1, Illum2);  // снаружи печать идет Illum1. swap чтобы смотреть актуальный шаг
 	return 0;
 }

@@ -64,6 +64,6 @@ size_t TransformFileDecartToSphere(const std::string name_file_sphere_direction,
 size_t TransformNetgenToVtk(const std::string name_file_netgen, const std::string name_new_file_vtk);
 size_t SortCellsGrid(Type* main_direction, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vector<int>& sorted_id_cell, vector<Eigen::Vector3d>& centers_tetra);
 #include <omp.h>
-#include<tbb/parallel_sort.h>
-#include<tbb/concurrent_vector.h>
+//#include<tbb/parallel_sort.h>
+//#include<tbb/concurrent_vector.h>
 size_t PointIntersect(Eigen::Vector3d start_point, Eigen::Vector3d direction, Eigen::Vector3d& point, Eigen::Vector3d& result);

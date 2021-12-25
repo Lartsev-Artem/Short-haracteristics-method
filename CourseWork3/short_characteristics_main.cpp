@@ -1,6 +1,7 @@
 #include "short_characteristics_main.h"
 typedef int IntId;
 
+int num_it=5;
 Vector3 start_point_plane_coord; // начало координат плоскости
 Matrix3 transform_matrix;   // матрица перехода из базового тетраэдра в плоскость
 Matrix3 inverse_transform_matrix;  // матрица перехода из плоскости в базовый тетраэдр
@@ -296,8 +297,20 @@ int TestGetNodes(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGr
 
 int main(int argc, char* argv[])
 {
+	
 	std::string name_file_settings;
-	name_file_settings = "D:\\Desktop\\FilesCourse\\settings_file.txt";
+
+	if (argc<=1)
+		name_file_settings = "D:\\Desktop\\FilesCourse\\settings_file.txt";
+	else
+		name_file_settings = argv[1];
+	if (argc > 2)
+		num_it = std::stoi(argv[2]);
+
+	cout << "Num_it= " << num_it << '\n';
+
+//	std::cout << "name_file_settings: " << name_file_settings << '\n';
+
 
 	//std::string main_file_direction = "D:\\Desktop\\FilesCourse\\";
 
@@ -319,7 +332,7 @@ int main(int argc, char* argv[])
 		std::cout << "Error reading the start settings\n";
 		return 1;
 	}
-
+	//std::cout <<"name_file_vtk: " << name_file_vtk << '\n';
 
 	//MainBuildGraphs(argc, argv);
 	//return 0;
@@ -358,6 +371,7 @@ int main(int argc, char* argv[])
 	ReadSphereDirectionDecartToSpherical(name_file_sphere_direction, directions, squares, square_surface);
 	_clock += omp_get_wtime();
 	std::cout << "\n Reading time of the sphere_direction file: " << _clock << "\n";
+
 
 	//MakeFileDirections(main_file_direction + "Direction.txt", directions);
 	//MakeFileCellData(main_file_direction + "CellData.txt", unstructured_grid);
