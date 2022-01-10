@@ -123,7 +123,7 @@ Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_n
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
 	// без интеграла рассеивания
 		{
-			/*Type Ie = 10 + GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
+			Type Ie = 10;
 			Type k = 10;
 			if (x.norm() > 0.3) { Ie = 0; k = 1; }
 
@@ -135,20 +135,9 @@ Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_n
 
 			if (I < 0)
 				I = 0;
-			return I;*/
+			return I;
 		}
 	
-		/*Type S = GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
-		Type Ie = 10;
-		Type k = 10;
-		if (x.norm() > 0.3) { Ie = 0; k = 1; }
-
-		S /= k;
-		Type I = exp(-s * k) * (I_node_prev - Ie - S) + (Ie + S);
-
-		if (I < 0)
-			I = 0;
-		return I;*/
 
 		Type S = GetS(cur_id, cur_direction, illum_old, directions, squares, square_surface);
 		Type Ie = 10.;
@@ -164,8 +153,6 @@ Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_n
 
 		Type I = exp(-k * s) * (I_node_prev * k + (exp(k * s) - 1) * (Ie * alpha + S * betta));
 		I /= k;
-		//S /= k;
-		//Type I = exp(-s * k) * (I_node_prev - Ie - S) + (Ie + S);
 
 		if (I < 0)
 			I = 0;
@@ -293,7 +280,7 @@ Type NormIllum(const std::vector<Type>& Illum, const std::vector<Type>& Illum2) 
 	return max;
 }
 
-std::vector<Vector3> full_dir;
+extern std::vector<Vector3> full_dir;
 int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, 
 	const std::vector<int>& all_pairs_face, std::map<int, Vector3>& nodes_value,
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface,
@@ -308,39 +295,6 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 	ofstream ofile;
 	ofile.open("File_with_Logs.txt");
 	Type norm = 0;
-
-
-	{
-		
-		ifstream ifile("D:\\Desktop\\FilesCourse\\SphereDir660.txt");
-		int n = 0;
-		ifile >> n;
-		full_dir.resize(n);
-
-		Type buf;
-		for (size_t i = 0; i < n; i++)
-		{
-			ifile >> buf;
-			ifile >> full_dir[i][0] >> full_dir[i][1] >> full_dir[i][2];
-		}
-
-		ifile.close();
-
-		/*int cc = 0;
-		Vector3 dirSphere;
-		Vector3 dirDecart;
-		for (size_t i = 0; i < n; i++)
-		{
-			dirDecart = full_dir[i];
-			FromSphericalToDecart(i, directions, dirSphere);
-			if ((dirSphere - dirDecart).norm()>1) {
-				cc++;
-			}
-		}
-
-		cout << "Don't equals dir: " << cc << "\n";
-		return 666;*/
-	}
 
 	do {
 		Type _clock = -omp_get_wtime();
@@ -406,7 +360,7 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 		ofile << "Time of iter: " << _clock << '\n';
 		ofile << "End iter_count number: " << count << '\n';
 
-	} while (norm > 5e-2 && count < num_it);
+	} while (norm > 1e-2 && count < num_it);
 	
 	std::cout << "Count:= " << count << '\n';
 	std::cout << "Error:= " << NormIllum(Illum1, Illum2) << '\n';

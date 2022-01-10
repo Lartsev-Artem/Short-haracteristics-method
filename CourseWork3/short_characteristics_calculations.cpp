@@ -1480,6 +1480,8 @@ size_t TransformNetgenToVtkSurface(const std::string name_file_netgen, const std
 	ifile.open(name_file_netgen);
 	if (!ifile.is_open()) {
 		std::cout << "Error read file netgen\n";
+		std::cout << "Try input name file without format (name, but no name.txt)\n";
+		std::cout << "Use onle txt format!\n";
 		return 1;
 	}
 

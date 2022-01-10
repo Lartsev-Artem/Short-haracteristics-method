@@ -1,8 +1,5 @@
-Error:= 5.69495
-Time of iter: 0.367157
+Error:= 16.5627
+Time of iter: 48.8023
 End iter_count number: 1
-Error:= 0.00329374
-Time of iter: 0.39511
-End iter_count number: 2
-Count:= 2
-Error:= 0.00329374
+Count:= 1
+Error:= 16.5627

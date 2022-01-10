@@ -1,0 +1,5 @@
+Error:= 8.83016
+Time of iter: 247.458
+End iter_count number: 1
+Count:= 1
+Error:= 8.83016

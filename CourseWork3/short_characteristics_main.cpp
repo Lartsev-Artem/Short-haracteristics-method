@@ -1,7 +1,9 @@
 #include "short_characteristics_main.h"
 typedef int IntId;
 
-int num_it=5;
+std::vector<Vector3> full_dir;
+
+int num_it=1;
 Vector3 start_point_plane_coord; // начало координат плоскости
 Matrix3 transform_matrix;   // матрица перехода из базового тетраэдра в плоскость
 Matrix3 inverse_transform_matrix;  // матрица перехода из плоскости в базовый тетраэдр
@@ -300,8 +302,8 @@ int main(int argc, char* argv[])
 	
 	std::string name_file_settings;
 
-	if (argc<=1)
-		name_file_settings = "D:\\Desktop\\FilesCourse\\settings_file.txt";
+	if (argc <= 1)
+		name_file_settings  = "D:\\Desktop\\FilesCourse\\settings_file.txt";
 	else
 		name_file_settings = argv[1];
 	if (argc > 2)
@@ -321,9 +323,10 @@ int main(int argc, char* argv[])
 	std::string out_file_grid_vtk;
 	std::string out_file_E1d;
 
-
+	//TransformNetgenToVtkSurface(name_file_settings + ".txt", name_file_settings + ".vtk");
 	//TransformFileDecartToSphere(name_file_sphere_direction, name_file_sphere_direction+"1.txt");
 	//TransformNetgenToVtk(main_file_direction + "Grids\\Sphere.txt", main_file_direction + "Sphere565.vtk");
+	//MakeFileDirectionsCenterTriangle(name_file_settings+"txt", unstructured_grid);
 	//return 0;
 	
 	
@@ -345,9 +348,6 @@ int main(int argc, char* argv[])
 	vtkDataArray* absorp_coef;
 	vtkDataArray* rad_en_loose_rate;
 
-	//TransformNetgenToVtkSurface(main_file_direction + "SphereDirectionNetral.txt", main_file_direction + "SphereDir.vtk");
-	//TransformNetgenToVtk(main_file_direction + "MySphere.txt", main_file_direction + "MySphere.vtk");
-	//return 0;
 
 	Type _clock = -omp_get_wtime();
 	if (ReadFileVtk(class_file_vtk, name_file_vtk, unstructured_grid, density, absorp_coef, rad_en_loose_rate, true)) {
@@ -369,6 +369,24 @@ int main(int argc, char* argv[])
 	_clock = -omp_get_wtime();
 	//ReadSphereDirectionVtk(1, name_file_sphere_direction, directions);
 	ReadSphereDirectionDecartToSpherical(name_file_sphere_direction, directions, squares, square_surface);
+	{
+
+		ifstream ifile(name_file_sphere_direction);
+		int n = 0;
+		ifile >> n;
+		full_dir.resize(n);
+
+		Type buf;
+		for (size_t i = 0; i < n; i++)
+		{
+			ifile >> buf;
+			ifile >> full_dir[i][0] >> full_dir[i][1] >> full_dir[i][2];
+		}
+
+		ifile.close();
+
+	}
+
 	_clock += omp_get_wtime();
 	std::cout << "\n Reading time of the sphere_direction file: " << _clock << "\n";
 
@@ -500,7 +518,7 @@ int main(int argc, char* argv[])
 	WriteFileSolution(out_file_grid_vtk, energy, unstructured_grid);
 //	WriteFileSolution(out_file_grid_vtk, sorted_id_cell, unstructured_grid);
 
-	GetFunction(out_file_grid_vtk, out_file_E1d);
+//	GetFunction(out_file_grid_vtk, out_file_E1d);
 
 	return 0;
 }
@@ -534,6 +552,8 @@ size_t WriteFileSolutionIllum(const std::string NameFileOut, const std::vector<T
 bool InTraceTriangle(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cell_face, int number_face, const Eigen::Vector3d& XX) {
 	/*face --- треугольник, X --- точка дл€ проверки*/
 
+	// «ƒ≈—№ XX начало луча, 
+
 	// вершины треугольника
 	Type AA[3];
 	Type BB[3];
@@ -545,8 +565,8 @@ bool InTraceTriangle(const int num_cell, const vtkSmartPointer<vtkUnstructuredGr
 
 	Eigen::Vector3d A, B, C, X;
 	{
-		Type Xx[3] = { XX[0], XX[1], XX[2] };
-		Eigen::Vector3d n = { 1./sqrt(3),1./sqrt(3),1. / sqrt(3) };
+		Type Xx[3] = { -5 * XX[0],-5 * XX[1],-5 * XX[2] };
+		Eigen::Vector3d n = XX; //XX==dir //{ 1./sqrt(3),1./sqrt(3),1. / sqrt(3) };
 		Eigen::Matrix3d basis;
 		SetBasis(Xx, n, basis);
 		//cout << basis << '\n';
@@ -567,13 +587,13 @@ bool InTraceTriangle(const int num_cell, const vtkSmartPointer<vtkUnstructuredGr
 		return true;
 	else return false;
 }
-int GetIdTrace(const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, std::vector<int>& id_cells) {
+int GetIdTrace(const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, std::vector<int>& id_cells, const Vector3& dir) {
 	
 	for (size_t i = 0; i < unstructured_grid->GetNumberOfCells(); i++)
 	{
 		for (size_t j = 0; j < 4; j++)
 		{
-			if (InTraceTriangle(i, unstructured_grid, unstructured_grid->GetCell(i), j, Eigen::Vector3d(-1, -1, -1))) {
+			if (InTraceTriangle(i, unstructured_grid, unstructured_grid->GetCell(i), j, dir)){  // Eigen::Vector3d(-1, -1, -1))) {
 				id_cells.push_back(i);
 				break;
 			}
@@ -620,39 +640,123 @@ size_t WriteFileSolutionEnergy1D(const std::string name_file_out, std::vector<in
 	vtkDataArray*& energy, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid) {
 
 	std::ofstream ofile;
-	ofile.open(name_file_out);
+	ofile.open(name_file_out + "value.txt");
 	if (!ofile.is_open()) {
 		std::cout << "Error open file\n";
 		std::cout << "file_graph is not opened for writing\n";
 		return 1;
 	}
 
+	std::ofstream ofile2;
+	ofile2.open(name_file_out + "trace.txt");
+	if (!ofile2.is_open()) {
+		std::cout << "Error open file\n";
+		std::cout << "file_graph is not opened for writing\n";
+		return 1;
+	}
 	
 	Vector3 center;
 	for (auto cur_id: id_cells){
 		CenterOfTetra(cur_id, unstructured_grid, center);
 		ofile << center.norm() << " " << energy->GetTuple1(cur_id) << '\n';
+		ofile2 << cur_id << '\n';
 	}
 
 	ofile.close();
+	ofile2.close();
 
 	return 0;
 }
 
-int GetFunction(const std::string name_file_vtk, const std::string name_file_out) {
+int GetFunction(const std::string name_file_vtk, const std::string name_file_out, const std::string name_scalars, const Vector3& dir) {
 	
 	vtkSmartPointer<vtkUnstructuredGrid> unstructured_grid =
 		vtkSmartPointer<vtkUnstructuredGrid>::New();
 
 	vtkDataArray* Energy;
 
-	ReadFileVtk(name_file_vtk, unstructured_grid, "scalars", Energy, true);
+	ReadFileVtk(name_file_vtk, unstructured_grid, name_scalars, Energy, true);
 
 	std::vector<int> id_cell;
 
-	GetIdTrace(unstructured_grid, id_cell);
+	GetIdTrace(unstructured_grid, id_cell, dir);
 
 	WriteFileSolutionEnergy1D(name_file_out, id_cell, Energy, unstructured_grid);
 
+	{
+	
+			int n = unstructured_grid->GetNumberOfCells();
+			vtkSmartPointer<vtkDoubleArray> IllumArray =
+				vtkSmartPointer<vtkDoubleArray>::New();
+			IllumArray->SetNumberOfTuples(n);
+			for (size_t i = 0; i < n; i++)
+				IllumArray->SetTuple1(i, 0);
+
+			for (size_t i = 0; i < id_cell.size(); i++)
+			{
+				IllumArray->SetTuple1(id_cell[i], 1);
+			}
+
+			vtkSmartPointer<vtkUnstructuredGrid> ungrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+
+			ungrid = unstructured_grid;
+
+			IllumArray->SetName("trace");
+			ungrid->GetCellData()->AddArray(IllumArray);
+			
+			//ungrid->GetCellData()->SetActiveScalars("trace");
+			//ungrid->GetCellData()->SetScalars(IllumArray);
+
+
+			vtkSmartPointer<vtkGenericDataObjectWriter> writer =
+				vtkSmartPointer<vtkGenericDataObjectWriter>::New();
+			writer->SetFileName((name_file_out + "trace.vtk").c_str());
+			writer->SetInputData(ungrid);
+			writer->Write();
+	}
+
 	return 0;
+}
+
+int main2(int argc, char* argv[])
+{
+	cout << "Format: name_grid.vtk name_out_file (optional: name_scalars, direction: x y z)\n";
+
+	std::string name_file_vtk = "";// " D:\\Desktop\\FilesCourse\\Sphere109.vtk";
+	std::string name_file_out = "";// " D:\\Desktop\\FilesCourse\\test";
+
+	// по умолчанию
+	std::string name_scalars = "scalars";
+	Vector3 direction(1, 0, 0);
+
+	if (argc <= 2) {
+		cout << "Not enough arguments: ";
+		cout << "input name_file_vtk and name_out_file\n";
+		return 0;
+	}
+	else {
+		name_file_vtk = argv[1];
+		name_file_out = argv[2];
+	}
+
+	if (argc == 4)
+		name_scalars = argv[3];
+	else if (argc == 7) {
+		name_scalars = argv[3];
+		direction[0] = std::stoi(argv[4]);
+		direction[1] = std::stoi(argv[5]);
+		direction[2] = std::stoi(argv[6]);
+	}
+
+	printf("You have entered: \n");
+	printf("File grid: %s\n", name_file_vtk.c_str());
+	printf("File out: %s\n", name_file_out.c_str());
+	printf("Name scalars: %s\n", name_scalars.c_str());
+	printf("direction: %lf %lf %lf\n\n", direction[0], direction[1], direction[2]);
+
+	GetFunction(name_file_vtk, name_file_out, name_scalars, direction);
+
+	cout << "Complete\n";
+	return 0;
+
 }
