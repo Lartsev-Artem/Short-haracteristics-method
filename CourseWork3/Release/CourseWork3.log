@@ -1,7 +1,7 @@
 ﻿  BigFunction.cpp
   The contents of <execution> are available only with C++17 or later.
-D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\BigFunction.cpp(84): warning #589: transfer of control bypasses initialization of:
-              variable "local_plane_x0" (declared at line 86)
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\BigFunction.cpp(114): warning #589: transfer of control bypasses initialization of:
+              variable "local_plane_x0" (declared at line 116)
     		switch (num_in_face) {
     		^
   
@@ -9,12 +9,12 @@ D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\BigFunction.cpp(84): warning #58
   The contents of <execution> are available only with C++17 or later.
   short_characteristics_calculations.cpp
   The contents of <execution> are available only with C++17 or later.
-D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(27): warning #589: transfer of control bypasses initialization of:
-              variable "local_plane_x0" (declared at line 29)
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(28): warning #589: transfer of control bypasses initialization of:
+              variable "local_plane_x0" (declared at line 30)
     		switch (num_in_face) {
     		^
   
-D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(768): warning #1491: definition from the enclosing scope variable "i" (declared at line 751) :is used. definition from the for loop variable "i" (declared at line 757) is ignored
+D:\Desktop\╠├╥╙\CourseWork3\CourseWork3\short_characteristics_calculations.cpp(770): warning #1491: definition from the enclosing scope variable "i" (declared at line 753) :is used. definition from the for loop variable "i" (declared at line 759) is ignored
     			normals(i, j) = n[j];
     			        ^
   

@@ -6,9 +6,21 @@
 #include "short_characteristics_main.h"
 
 #include<map>
+
+
 typedef double Type;
 typedef Eigen::Vector3d Vector3;
 typedef Eigen::Matrix3d Matrix3;
+struct Normals {
+	std::vector<Vector3> n;
+	Normals() {
+
+	}
+	Normals(const int size) {
+		n.resize(size);
+	}
+};
+
 int InitGlobalValue(Vector3& start_point_plane_coord, Matrix3& transform_matrix, Matrix3& inverse_transform_matrix,
 	Matrix3& straight_face, Matrix3& inclined_face);
 
@@ -83,4 +95,10 @@ int Min(const T a, const int b) {
 	if (a < b) return a;
 	return b;
 }
+
+//=================================================
+
+Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_node_prev, const Vector3& cur_direction,
+	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate, const std::vector<Type>& illum_old,
+	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface);
 #endif

@@ -2,6 +2,7 @@
 typedef int IntId;
 
 std::vector<Vector3> full_dir;
+std::string name_file_normals;
 
 int num_it=1;
 Vector3 start_point_plane_coord; // начало координат плоскости
@@ -330,7 +331,8 @@ int main(int argc, char* argv[])
 	//return 0;
 	
 	
-	if (ReadStartSettings(name_file_settings, class_file_vtk, name_file_vtk, name_file_sphere_direction, out_file_grid_vtk, name_file_graph, out_file_E1d)) {
+	if (ReadStartSettings(name_file_settings, class_file_vtk, name_file_vtk, name_file_sphere_direction, out_file_grid_vtk, name_file_graph, out_file_E1d,
+		name_file_normals)) {
 
 		std::cout << "Error reading the start settings\n";
 		return 1;

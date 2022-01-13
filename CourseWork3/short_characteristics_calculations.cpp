@@ -1,4 +1,5 @@
 #include"short_characteristics_calculations.h"
+extern std::vector<Normals> normals;
 
 Type BoundaryFunction(const Vector3 x) {
 
@@ -17,7 +18,7 @@ Type CalculateIllumeOnInnerFace(const int num_in_face, const int global_num_in_f
 	else {
 
 		if (nodes_value.find(global_num_in_face)->second[0] < -600)
-			cout << global_num_in_face << "CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
+			cout  << "CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
 
 		Vector3 x0_local;
 
@@ -562,6 +563,7 @@ Type GetValueInCenterCell(const int num_cell, const vtkSmartPointer<vtkUnstructu
 				straight_face, inclined_face,  transform_matrix, start_point_plane_coord);
 
 			value = GetIllum(num_cell, x0,s, I_x0, density, absorp_coef, rad_en_loose_rate);
+			//value = CurGetIllum(num_cell, x0, s, I_x0, direction, density, absorp_coef, rad_en_loose_rate,)
 			break;
 		}
 	}
@@ -905,15 +907,17 @@ size_t NormalAndSquareFace(size_t NumberCell, size_t NumberFace, const vtkSmartP
 			n[i] *= -1;
 	return 0;
 }
-int FindInAndOutFaces(const Vector3& direction, const int NumberCell,const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, int* face_state) {
+int FindInAndOutFaces(const Vector3& direction, const int NumberCell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, int* face_state) {
 	//face_state  -0=> выход€ща€ грань,  1=> вход€ща€  face_state.size=4!!!  
 
 	Vector3 normal;
 
 	for (size_t i = 0; i < 4; ++i) {
 
+		//new version
+		//NormalAndSquareFace(NumberCell, i, unstructuredgrid, normal);
+		normal = normals[NumberCell].n[i];
 
-		NormalAndSquareFace(NumberCell, i, unstructuredgrid, normal);
 		const Type eps = 1e-6;
 		if (normal.dot(direction) < -eps)
 			face_state[i] = 1;
@@ -923,7 +927,7 @@ int FindInAndOutFaces(const Vector3& direction, const int NumberCell,const vtkSm
 			face_state[i] = 0;  // если грань параллельна, считаем, что она не €вл€етс€ определ€ющей
 			//std::cout << "FindInAndOutFaces: error directions\n";
 		}
-		}
+	}
 
 	return 0;
 }
@@ -961,6 +965,20 @@ int InitNodesValue(const std::vector<int>& all_pairs_face, std::map<int, Vector3
 int SetVertexMatrix(const size_t number_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructured_grid, Eigen::Matrix4d& vertex_tetra) {
 
 	// 4 вершины треугольника(по столбцам и единицы в нижний строке)
+
+	{// new version
+		vtkPoints* points = unstructured_grid->GetCell(number_cell)->GetPoints();
+		for (size_t j = 0; j < 3; j++) {
+			vertex_tetra(j, 2) = points->GetPoint(2)[j];
+			vertex_tetra(j, 0) = points->GetPoint(0)[j];
+			vertex_tetra(j, 1) = points->GetPoint(1)[j];
+			vertex_tetra(j, 3) = points->GetPoint(3)[j];
+		}
+
+		for (size_t i = 0; i < 4; i++)
+			vertex_tetra(3, i) = 1;
+		return 0;
+	}
 
 	for (size_t j = 0; j < 3; j++)
 		vertex_tetra(j, 2) = unstructured_grid->GetCell(number_cell)->GetPoints()->GetPoint(2)[j];

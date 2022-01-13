@@ -103,11 +103,11 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -121,13 +121,13 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,11 +139,11 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -157,13 +157,13 @@
       <OpenMPSupport>true</OpenMPSupport>
       <OpenMP>GenerateParallelCode</OpenMP>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

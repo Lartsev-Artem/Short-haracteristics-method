@@ -7,6 +7,36 @@ extern Matrix3	straight_face;  // 3 узла интерпол€ции
 extern Matrix3 inclined_face;  // 3 узла интерпол€ции на наклонной плоскости
 extern int num_it;
 
+int num_cur_direction = -1; // for debug error directions
+
+extern std::string name_file_normals;
+
+int ReadNormalFile(std::vector<Normals>& normals) {
+	std::ifstream ifile;
+
+	ifile.open(name_file_normals);
+	if (!ifile.is_open()) {
+		std::cout << "Error read file normals\n";
+		return 1;
+	}
+
+	int N;
+	ifile >> N;
+	normals.resize(N);
+
+	Normals norm(4);
+	for (size_t i = 0; i < N; i++)
+	{
+		for (int j = 0; j < 4; j++)
+			ifile >> norm.n[j][0] >> norm.n[j][1] >> norm.n[j][2];
+		normals[i] = norm;
+	}
+
+	ifile.close();
+	return 0;
+}
+std::vector<Normals> normals;
+
 //unused
 Type GetSPart(const int num_cell, const Vector3& direction, const std::vector<Type>& illum_old,
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
@@ -74,7 +104,7 @@ Type CalculateIllumeOnInnerFace(const int num_in_face, const int global_num_in_f
 	else {
 
 		if (nodes_value.find(global_num_in_face)->second[0] < -600)
-			cout << global_num_in_face << "CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
+			cout << "Num_dir: " << num_cur_direction << " CalculateIllumeOnInnerFace:  Undefine in face" << global_num_in_face << " !!!\n";
 
 		Vector3 x0_local;
 
@@ -268,6 +298,38 @@ int GetNodes(const int num_cur_cell, const vtkSmartPointer<vtkUnstructuredGrid>&
 	return 0;
 }
 
+Type GetValueInCenterCell(const int num_cell, const vtkSmartPointer<vtkUnstructuredGrid>& unstructuredgrid, vtkCell* cur_cell, const Vector3 center, const Vector3 direction,
+	const Eigen::Matrix4d& vertex_tetra, const std::map<int, Vector3>& nodes_value, const std::vector<int>& all_pairs_face,
+	vtkDataArray* density, vtkDataArray* absorp_coef, vtkDataArray* rad_en_loose_rate,
+	const Matrix3& straight_face, const Matrix3& inclined_face, const Matrix3& transform_matrix, const Vector3& start_point_plane_coord,
+	const std::vector<Type>& illum_old,
+	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
+	/*¬се грани должно быть определены*/
+	Type value = -666;
+	Vector3 x0;
+
+	for (size_t i = 0; i < 4; i++) {
+
+		IntersectionWithPlane(cur_cell->GetFace(i), center, direction, x0);
+		if (InTriangle(num_cell, unstructuredgrid, cur_cell, i, x0)) {
+			if ((center - x0).dot(direction) <= 0) continue;
+			Type s = (center - x0).norm();
+			int global_num_in_face = Min(all_pairs_face[num_cell * 4 + i], num_cell * 4 + i);
+			//if (global_num_in_face == -1)global_num_in_face = num_cell * 4 + i;
+
+			Type I_x0 = CalculateIllumeOnInnerFace(i, global_num_in_face, vertex_tetra, center, x0, nodes_value,
+				straight_face, inclined_face, transform_matrix, start_point_plane_coord);
+			
+			value = CurGetIllum(num_cell, x0, s, I_x0, direction, density, absorp_coef, rad_en_loose_rate, illum_old, directions, squares, square_surface);
+			break;
+		}
+	}
+	//if (value < 0) cout << "GetValueInCenterCell" << num_cell << " <0 \n";
+	if (value < 0)
+		return 0;
+	return value;
+}
+
 Type NormIllum(const std::vector<Type>& Illum, const std::vector<Type>& Illum2) {
 	Type max = -1;
 	Type buf;
@@ -292,6 +354,9 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 	vector<IntId> sorted_id_cell(unstructured_grid->GetNumberOfCells());
 	int count = 0;
 
+	
+	ReadNormalFile(normals);
+
 	ofstream ofile;
 	ofile.open("File_with_Logs.txt");
 	Type norm = 0;
@@ -307,7 +372,8 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 			/*---------------------------------- далее FOR по направлени€м----------------------------------*/
 			for (int num_direction = 0; num_direction < count_direction; ++num_direction)
 			{
-				FromSphericalToDecart(num_direction, directions, direction);
+				num_cur_direction = num_direction;
+				//FromSphericalToDecart(num_direction, directions, direction);
 				direction = full_dir[num_direction];
 				ReadGraph(name_file_graph + to_string(num_direction) + ".txt", sorted_id_cell);
 				InitNodesValue(all_pairs_face, nodes_value);
@@ -315,9 +381,10 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 				Vector3 x;
 				Vector3 x0;
 				int num_cell;
+				const int count_cells = unstructured_grid->GetNumberOfCells();
 
 				/*---------------------------------- далее FOR по €чейкам----------------------------------*/
-				for (int h = 0; h < unstructured_grid->GetNumberOfCells(); ++h) {
+				for (int h = 0; h < count_cells; ++h) {
 					num_cell = sorted_id_cell[h];
 
 					SetVertexMatrix(num_cell, unstructured_grid, vertex_tetra);
@@ -337,7 +404,7 @@ int Start(const std::string name_file_graph, const vtkSmartPointer<vtkUnstructur
 					Type I_k_dir = GetValueInCenterCell(num_cell, unstructured_grid, unstructured_grid->GetCell(num_cell), center, direction, vertex_tetra,
 						nodes_value, all_pairs_face,
 						density, absorp_coef, rad_en_loose_rate,
-						straight_face, inclined_face, transform_matrix, start_point_plane_coord);
+						straight_face, inclined_face, transform_matrix, start_point_plane_coord, Illum2, directions, squares, square_surface);
 
 					Illum1[num_direction * unstructured_grid->GetNumberOfCells() + num_cell] = I_k_dir;
 				}

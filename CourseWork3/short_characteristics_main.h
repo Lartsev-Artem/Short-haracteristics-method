@@ -23,7 +23,7 @@ typedef Eigen::Matrix3d Matrix3;
 
 template<typename Type>
 size_t ReadStartSettings(std::string name_file_settings, Type& class_file_vtk, std::string& name_file_vtk,
-	std::string& name_file_sphere_direction, std::string& out_file_grid_vtk, std::string& name_file_graph, std::string& out_file_E1d) {
+	std::string& name_file_sphere_direction, std::string& out_file_grid_vtk, std::string& name_file_graph, std::string& out_file_E1d, std::string&  file_normals) {
 
 	std::ifstream ifile;
 	ifile.open(name_file_settings);
@@ -41,6 +41,7 @@ size_t ReadStartSettings(std::string name_file_settings, Type& class_file_vtk, s
 	getline(ifile, out_file_grid_vtk);
 	getline(ifile, name_file_graph);
 	getline(ifile, out_file_E1d);
+	getline(ifile, file_normals);
 
 	ifile.close();
 	return 0;
