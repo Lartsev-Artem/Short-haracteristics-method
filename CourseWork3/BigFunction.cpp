@@ -153,7 +153,7 @@ Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_n
 	const vector<Type>& directions, const vector<Type>& squares, const Type square_surface) {
 	// без интеграла рассеивания
 		{
-			Type Ie = 10;
+		/*	Type Ie = 10;
 			Type k = 10;
 			if (x.norm() > 0.3) { Ie = 0; k = 1; }
 
@@ -165,7 +165,7 @@ Type CurGetIllum(const int cur_id, const Vector3 x, const Type s, const Type I_n
 
 			if (I < 0)
 				I = 0;
-			return I;
+			return I;*/
 		}
 	
 

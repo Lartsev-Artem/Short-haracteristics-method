@@ -1,5 +1,5 @@
-Error:= 21.6142
-Time of iter: 20.3075
+Error:= 21.3251
+Time of iter: 22.2348
 End iter_count number: 1
 Count:= 1
-Error:= 21.6142
+Error:= 21.3251
